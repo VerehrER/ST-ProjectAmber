@@ -287,54 +287,52 @@ function saveSettings() {
 
 function createSettingsUI() {
     const settingsHtml = `
-    <div id="json-to-worldbook-panel" class="extension_settings">
-        <div class="inline-drawer">
-            <div class="inline-drawer-toggle inline-drawer-header">
-                <b>Project Amber</b>
-                <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+    <div class="inline-drawer">
+        <div class="inline-drawer-toggle inline-drawer-header">
+            <b>Project Amber</b>
+            <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
+        </div>
+        <div class="inline-drawer-content" id="json-to-worldbook-panel">
+            <div class="jtw-section">
+                <h4>基本设置</h4>
+                <div class="jtw-checkbox-row">
+                    <input type="checkbox" id="jtw-enabled" />
+                    <label for="jtw-enabled">启用扩展</label>
+                </div>
+                <div class="jtw-checkbox-row">
+                    <input type="checkbox" id="jtw-auto-extract" />
+                    <label for="jtw-auto-extract">自动提取（每条AI消息）</label>
+                </div>
             </div>
-            <div class="inline-drawer-content">
-                <div class="jtw-section">
-                    <h4>基本设置</h4>
-                    <div class="jtw-checkbox-row">
-                        <input type="checkbox" id="jtw-enabled" />
-                        <label for="jtw-enabled">启用扩展</label>
-                    </div>
-                    <div class="jtw-checkbox-row">
-                        <input type="checkbox" id="jtw-auto-extract" />
-                        <label for="jtw-auto-extract">自动提取（每条AI消息）</label>
-                    </div>
-                </div>
-                
-                <div class="jtw-section">
-                    <h4>世界书设置</h4>
-                    <label>目标世界书（留空使用角色卡绑定的）</label>
-                    <select id="jtw-target-worldbook" class="jtw-select">
-                        <option value="">-- 使用角色卡世界书 --</option>
+            
+            <div class="jtw-section">
+                <h4>世界书设置</h4>
+                <label>目标世界书（留空使用角色卡绑定的）</label>
+                <select id="jtw-target-worldbook" class="jtw-select">
+                    <option value="">-- 使用角色卡世界书 --</option>
+                </select>
+                <div style="margin-top: 10px;">
+                    <label>条目位置</label>
+                    <select id="jtw-entry-position" class="jtw-select">
+                        <option value="0">Before Char Defs (0)</option>
+                        <option value="1">After Char Defs (1)</option>
+                        <option value="2">Top of AN (2)</option>
+                        <option value="3">Bottom of AN (3)</option>
+                        <option value="4">@ Depth (4)</option>
                     </select>
-                    <div style="margin-top: 10px;">
-                        <label>条目位置</label>
-                        <select id="jtw-entry-position" class="jtw-select">
-                            <option value="0">Before Char Defs (0)</option>
-                            <option value="1">After Char Defs (1)</option>
-                            <option value="2">Top of AN (2)</option>
-                            <option value="3">Bottom of AN (3)</option>
-                            <option value="4">@ Depth (4)</option>
-                        </select>
-                    </div>
-                    <div style="margin-top: 10px;">
-                        <label>排序优先级</label>
-                        <input type="number" id="jtw-entry-order" class="jtw-input" value="100" min="0" />
-                    </div>
                 </div>
-                
-                <div class="jtw-section">
-                    <h4>手动操作</h4>
-                    <button id="jtw-extract-last" class="jtw-btn">从最后一条消息提取</button>
-                    <button id="jtw-save-to-wb" class="jtw-btn primary" disabled>保存到世界书</button>
-                    <div id="jtw-status" class="jtw-status" style="display: none;"></div>
-                    <div id="jtw-json-preview" class="jtw-json-preview" style="display: none;"></div>
+                <div style="margin-top: 10px;">
+                    <label>排序优先级</label>
+                    <input type="number" id="jtw-entry-order" class="jtw-input" value="100" min="0" />
                 </div>
+            </div>
+            
+            <div class="jtw-section">
+                <h4>手动操作</h4>
+                <button id="jtw-extract-last" class="jtw-btn">从最后一条消息提取</button>
+                <button id="jtw-save-to-wb" class="jtw-btn primary" disabled>保存到世界书</button>
+                <div id="jtw-status" class="jtw-status" style="display: none;"></div>
+                <div id="jtw-json-preview" class="jtw-json-preview" style="display: none;"></div>
             </div>
         </div>
     </div>`;
