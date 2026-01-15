@@ -291,7 +291,7 @@ function createSettingsUI() {
         <div class="inline-drawer">
             <div class="inline-drawer-toggle inline-drawer-header">
                 <b>Project Amber</b>
-                <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
+                <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
             </div>
             <div class="inline-drawer-content">
                 <div class="jtw-section">
