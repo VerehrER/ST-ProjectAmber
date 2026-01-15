@@ -847,23 +847,26 @@ function createSettingsUI() {
                 
                 <div class="jtw-section">
                     <h4>提取设置</h4>
-                    <div style="margin-bottom: 10px;">
-                        <label>历史消息数量</label>
-                        <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label>排除的标签（逗号分隔）</label>
-                        <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
-                        <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label>思维链标签（逗号分隔）</label>
-                        <input type="text" id="jtw-thought-tags" class="jtw-input" placeholder="think,thinking,thought" />
-                        <div class="jtw-hint">思维链标签会特殊处理：如果只存在闭合标签（如&lt;/think&gt;），会删除从开头到闭合标签的所有内容</div>
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label>条目名称</label>
-                        <input type="text" id="jtw-character-list-name" class="jtw-input" placeholder="出场角色列表" />
+                    <button id="jtw-toggle-extract-settings" class="jtw-btn" style="margin-bottom: 10px;">展开提取设置</button>
+                    <div id="jtw-extract-settings-container" style="display: none;">
+                        <div style="margin-bottom: 10px;">
+                            <label>历史消息数量</label>
+                            <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>排除的标签（逗号分隔）</label>
+                            <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
+                            <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>思维链标签（逗号分隔）</label>
+                            <input type="text" id="jtw-thought-tags" class="jtw-input" placeholder="think,thinking,thought" />
+                            <div class="jtw-hint">思维链标签会特殊处理：如果只存在闭合标签（如&lt;/think&gt;），会删除从开头到闭合标签的所有内容</div>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>条目名称</label>
+                            <input type="text" id="jtw-character-list-name" class="jtw-input" placeholder="出场角色列表" />
+                        </div>
                     </div>
                 </div>
                 
@@ -1026,6 +1029,19 @@ function createSettingsUI() {
         } else {
             $container.slideDown();
             $button.text('收起自定义提示词');
+        }
+    });
+    
+    // 提取设置折叠按钮
+    $('#jtw-toggle-extract-settings').on('click', function() {
+        const $container = $('#jtw-extract-settings-container');
+        const $button = $(this);
+        if ($container.is(':visible')) {
+            $container.slideUp();
+            $button.text('展开提取设置');
+        } else {
+            $container.slideDown();
+            $button.text('收起提取设置');
         }
     });
     
