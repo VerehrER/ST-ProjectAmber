@@ -238,17 +238,8 @@ function removeTaggedContent(text, tagsString) {
     
     let result = text;
     const settings = getSettings();
-    
-    // 1. 处理排除标签列表（删除完整配对的标签内容）
-    if (tagsString) {
-        const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
-        for (const tag of tags) {
-            const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
-            result = result.replace(pairRegex, '');
-        }
-    }
-    
-    // 2. 独立处理思维链标签（处理孤立闭合标签）
+        
+    // 1. 独立处理思维链标签（处理孤立闭合标签）
     const thoughtTagsStr = settings.thoughtTags || 'think,thinking,thought';
     const thoughtTags = thoughtTagsStr.split(',').map(t => t.trim()).filter(t => t);
     
@@ -274,6 +265,15 @@ function removeTaggedContent(text, tagsString) {
                 const deleteRegex = new RegExp(`^[\\s\\S]*?<\\/${tag}>`, 'i');
                 result = result.replace(deleteRegex, '');
             }
+        }
+    }
+    
+    // 2. 处理排除标签列表（删除完整配对的标签内容）
+    if (tagsString) {
+        const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
+        for (const tag of tags) {
+            const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+            result = result.replace(pairRegex, '');
         }
     }
     
