@@ -37,8 +37,7 @@ const defaultSettings = {
     // 角色提取提示词
     promptU1: "你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。",
     promptA1: "明白。请提供【世界观】和【剧情经历】，我将提取角色并以JSON数组输出。",
-    promptU2: `
-**1. 世界观：**
+    promptU2: `**1. 世界观：**
 <world_info>
 {{description}}
 {{worldInfo}}
@@ -514,25 +513,8 @@ async function saveCharacterListToWorldbook(characters) {
             }
         }
 
-        // 格式化新角色内容
-        const newContent = characters.map(char => {
-            let content = `- ${char.name}:\n`;
-            if (char.intro) {
-                content += `  intro: ${char.intro}\n`;
-            }
-            if (char.background) {
-                content += `  background: ${char.background}\n`;
-            }
-            if (char.persona) {
-                if (char.persona.keywords && Array.isArray(char.persona.keywords)) {
-                    content += `  keywords: ${char.persona.keywords.join(', ')}\n`;
-                }
-                if (char.persona.speaking_style) {
-                    content += `  speaking_style: ${char.persona.speaking_style}`;
-                }
-            }
-            return content;
-        }).join('\n\n');
+        // 格式化新角色内容（使用 YAML 格式）
+        const newContent = characters.map(char => jsonToYaml(char, 0)).join('\n\n');
 
         // 合并内容（追加到底部）
         const finalContent = existingContent 
