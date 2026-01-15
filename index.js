@@ -2362,7 +2362,7 @@ async function saveExtractedJson() {
 /**
  * 处理新消息（自动提取模式）
  */
-function onMessageReceived(mesId) {
+async function onMessageReceived(mesId) {
     const settings = getSettings();
     if (!settings.enabled || !settings.autoExtract) return;
 
@@ -2374,10 +2374,17 @@ function onMessageReceived(mesId) {
     const json = extractJson(msg.mes);
     if (json) {
         console.log(`[${EXT_NAME}] 自动提取到 JSON:`, json);
-        settings.lastExtractedJson = json;
-        saveSettings();
-        showJsonPreview(json);
-        showStatus("自动提取到 JSON 数据，点击保存按钮写入世界书");
+        
+        // 直接保存到世界书
+        const result = await saveJsonToWorldbook(json);
+        
+        if (result.success) {
+            console.log(`[${EXT_NAME}] 自动保存成功: ${result.worldbook} (UID: ${result.uid})`);
+            // 成功时不显示提示，保持界面简洁
+        } else {
+            // 只在失败时显示提示
+            showStatus(`自动保存失败: ${result.error}`, true);
+        }
     }
 }
 

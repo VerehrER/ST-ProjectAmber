@@ -1,7 +1,7 @@
 # Project Amber
 
-一个 SillyTavern 扩展，用于从 AI 输出中提取 JSON 数据并保存到世界书。
-目前仅此功能。
+SillyTavern 扩展，用于从 AI 输出中提取 JSON 数据并保存到世界书。
+现在也支持注入提示词。
 
 ## 功能
 
