@@ -75,7 +75,7 @@
 }
 
 .jtw-btn.primary {
-    background: var(--SmartThemeChatTintColor);
+    background: var(--SmartThemeChatTintColor) !important;
 }
 
 .jtw-status {
@@ -196,7 +196,8 @@
 }
 
 .jtw-task-item:hover {
-    background: var(--SmartThemeQuoteColor);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: var(--SmartThemeChatTintColor);
 }
 
 .jtw-task-info {
