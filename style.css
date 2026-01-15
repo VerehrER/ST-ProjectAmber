@@ -65,7 +65,7 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    background: var(--SmartThemeQuoteColor);
+    /* background: var(--SmartThemeQuoteColor); */
     color: var(--SmartThemeBodyColor);
     transition: opacity 0.2s;
 }
@@ -75,8 +75,8 @@
 }
 
 .jtw-btn.primary {
-    /* background: var(--SmartThemeChatTintColor); */
-    background: #ffaa00;
+    background: var(--SmartThemeChatTintColor);
+    /* background: #ffaa00; */
 }
 
 .jtw-status {
