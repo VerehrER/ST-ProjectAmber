@@ -28,10 +28,17 @@ const defaultSettings = {
     lastExtractedJson: null,   // 上次提取的 JSON
     // 角色列表提取设置
     extractModel: "",          // 自定义模型名称（留空使用当前模型）
-    excludeTags: "think,thinking,summary,safety,example,examples,ooc",  // 要排除的标签列表
+    excludeTags: "summary,safety",  // 要排除的标签列表
+    thoughtTags: "think,thinking,thought",  // 思维链标签（会处理孤立闭合标签）
     historyCount: 50,          // 发送的历史消息数量
     characterListPosition: 0,  // 角色列表条目位置
     characterListOrder: 100,   // 角色列表条目排序
+    characterListName: "出场角色列表",  // 角色列表世界书条目名称
+    // 角色提取提示词
+    promptU1: "你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。",
+    promptA1: "明白。请提供【世界观】和【剧情经历】，我将提取角色并以JSON数组输出。",
+    promptU2: "### 上下文\n\n**1. 世界观：**\n<world_info>\n{{description}}\n{{worldInfo}}\n玩家角色：{{user}}\n{{persona}}\n</world_info>\n\n**2. {{user}}经历：**\n<chat_history>\n{{chatHistory}}\n</chat_history>\n\n{{existingCharacters}}\n\n### 输出要求\n\n1. 返回一个合法 JSON 数组，使用标准 JSON 语法（键名和字符串都用半角双引号 \")\n2. 只提取有具体称呼的新角色（不包括{{user}}自己）\n3. 每个角色都需要 name / intro / background / persona\n4. 文本内容中如需使用引号，请使用单引号或中文引号「」或\"\"，不要使用半角双引号 \"\n5. 如果没有新角色返回 []\n\n模板: [{\n  \"name\": \"角色名\",\n  \"intro\": \"外貌特征与身份的详细描述\",\n  \"background\": \"角色生平与背景。解释由于什么过去导致了现在的性格，以及他为什么会出现在当前场景中。\",\n  \"persona\": {\n    \"keywords\": [\"性格关键词1\", \"性格关键词2\", \"性格关键词3\"],\n    \"speaking_style\": \"说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）等。对待主角的态度（尊敬、喜爱、蔑视、恐惧等）。\"\n  }\n}]",
+    promptA2: "了解，开始生成JSON:",
 };
 
 // ==================== JSON 解析工具 ==================== 
@@ -180,19 +187,18 @@ const DEFAULT_PROMPTS = {
 ### 输出要求
 
 1. 返回一个合法 JSON 数组，使用标准 JSON 语法（键名和字符串都用半角双引号 "）
-2. 只提取有具体称呼的角色（不包括{{user}}自己）
-3. 每个角色需要 name / location / info 三个字段
-4. 文本内容中如需使用引号，请使用单引号或中文引号「」或""，不要使用半角双引号 "
+2. 只提取有具体称呼的新角色（不包括{{user}}自己）
+3. 每个角色都需要 name / intro / background / persona
+4. 文本内容中如需使用引号，请使用单引号或中文引号「」或“”，不要使用半角双引号 "
 5. 如果没有新角色返回 []
 
-模板：[{
+模板: [{
   "name": "角色名",
-  "location": "当前/最后出现的地点",
   "intro": "外貌特征与身份的详细描述",
   "background": "角色生平与背景。解释由于什么过去导致了现在的性格，以及他为什么会出现在当前场景中。",
   "persona": {
     "keywords": ["性格关键词1", "性格关键词2", "性格关键词3"],
-    "speaking_style": "说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）。对待主角的态度（尊敬、蔑视、恐惧等）。"
+    "speaking_style": "说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）等。对待主角的态度（尊敬、喜爱、蔑视、恐惧等）。"
   }
 }]`,
         a2: `了解，开始生成JSON:`
@@ -212,7 +218,8 @@ function removeTaggedContent(text, tagsString) {
     let result = text;
     
     // 思维链相关的标签（需要处理孤立闭合标签）
-    const thoughtTags = ['think', 'thinking', 'thought'];
+    const settings = getSettings();
+    const thoughtTags = settings.thoughtTags.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
     
     for (const tag of tags) {
         // 1. 先匹配完整的 <tag>...</tag> 格式，包括多行内容
@@ -300,7 +307,13 @@ function getChatHistory(count) {
  * @returns {Array}
  */
 function buildExtractCharactersMessages(vars) {
-    const prompts = DEFAULT_PROMPTS.extractCharacters;
+    const settings = getSettings();
+    const prompts = {
+        u1: settings.promptU1,
+        a1: settings.promptA1,
+        u2: settings.promptU2,
+        a2: settings.promptA2
+    };
     
     const replaceVars = (template) => {
         return template
@@ -446,7 +459,7 @@ async function getExistingCharacters() {
         if (!worldData?.entries) return [];
         
         const entriesArray = Object.values(worldData.entries);
-        const characterListEntry = entriesArray.find(e => e && e.comment === '出场角色列表');
+        const characterListEntry = entriesArray.find(e => e && e.comment === settings.characterListName);
         
         if (!characterListEntry?.content) return [];
         
@@ -475,7 +488,7 @@ async function getExistingCharacters() {
 async function saveCharacterListToWorldbook(characters) {
     try {
         const settings = getSettings();
-        const entryName = '出场角色列表';
+        const entryName = settings.characterListName || '出场角色列表';
         
         // 确定目标世界书
         let targetBook = settings.targetWorldbook || getCharacterWorldbook();
@@ -516,7 +529,6 @@ async function saveCharacterListToWorldbook(characters) {
         // 格式化新角色内容
         const newContent = characters.map(char => {
             let content = `- ${char.name}:\n`;
-            content += `  location: ${char.location || '未知'}\n`;
             if (char.intro) {
                 content += `  intro: ${char.intro}\n`;
             }
@@ -874,6 +886,35 @@ function createSettingsUI() {
                         <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
                         <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
                     </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>思维链标签（逗号分隔）</label>
+                        <input type="text" id="jtw-thought-tags" class="jtw-input" placeholder="think,thinking,thought" />
+                        <div class="jtw-hint">思维链标签会特殊处理：如果只存在闭合标签（如&lt;/think&gt;），会删除从开头到闭合标签的所有内容</div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>条目名称</label>
+                        <input type="text" id="jtw-character-list-name" class="jtw-input" placeholder="出场角色列表" />
+                    </div>
+                </div>
+                
+                <div class="jtw-section">
+                    <h4>提示词设置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label>User 消息 1</label>
+                        <textarea id="jtw-prompt-u1" class="jtw-input" rows="2"></textarea>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>Assistant 消息 1</label>
+                        <textarea id="jtw-prompt-a1" class="jtw-input" rows="2"></textarea>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>User 消息 2</label>
+                        <textarea id="jtw-prompt-u2" class="jtw-input" rows="8"></textarea>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>Assistant 消息 2</label>
+                        <textarea id="jtw-prompt-a2" class="jtw-input" rows="1"></textarea>
+                    </div>
                 </div>
                 
                 <div class="jtw-section">
@@ -963,6 +1004,36 @@ function createSettingsUI() {
     
     $('#jtw-exclude-tags').val(settings.excludeTags || '').on('change', function() {
         settings.excludeTags = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-thought-tags').val(settings.thoughtTags || 'think,thinking,thought').on('change', function() {
+        settings.thoughtTags = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-character-list-name').val(settings.characterListName || '出场角色列表').on('change', function() {
+        settings.characterListName = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-prompt-u1').val(settings.promptU1 || '').on('change', function() {
+        settings.promptU1 = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-prompt-a1').val(settings.promptA1 || '').on('change', function() {
+        settings.promptA1 = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-prompt-u2').val(settings.promptU2 || '').on('change', function() {
+        settings.promptU2 = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-prompt-a2').val(settings.promptA2 || '').on('change', function() {
+        settings.promptA2 = $(this).val();
         saveSettings();
     });
     
