@@ -860,6 +860,51 @@ function createSettingsUI() {
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content" id="json-to-worldbook-panel">
+            <!-- 通用设置按钮（右上角） -->
+            <div style="text-align: right; margin-bottom: 10px;">
+                <button id="jtw-toggle-common-settings" class="jtw-btn">⚙️ 通用设置</button>
+            </div>
+            
+            <!-- 通用设置面板 -->
+            <div id="jtw-common-settings-panel" style="display: none; margin-bottom: 15px; padding: 10px; border: 1px solid #ccc; border-radius: 5px; background: #f9f9f9;">
+                <h4 style="margin-top: 0;">通用设置</h4>
+                
+                <div class="jtw-section">
+                    <h5>模型设置</h5>
+                    <div style="margin-bottom: 10px;">
+                        <label>使用模型（留空使用当前模型）</label>
+                        <input type="text" id="jtw-extract-model" class="jtw-input" placeholder="留空使用当前模型" />
+                    </div>
+                </div>
+                
+                <div class="jtw-section">
+                    <h5>提取设置</h5>
+                    <div style="margin-bottom: 10px;">
+                        <label>历史消息数量</label>
+                        <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>仅包括标签（逗号分隔）</label>
+                        <input type="text" id="jtw-include-tags" class="jtw-input" placeholder="main_plot" />
+                        <div class="jtw-hint">只提取这些标签内的内容，留空则不限制</div>
+                    </div>
+                    <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                        <input type="checkbox" id="jtw-apply-exclude-after-include" />
+                        <label for="jtw-apply-exclude-after-include">提取包括标签后再执行排除处理</label>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>排除的标签（逗号分隔）</label>
+                        <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
+                        <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>思维链标签（逗号分隔）</label>
+                        <input type="text" id="jtw-thought-tags" class="jtw-input" placeholder="think,thinking,thought" />
+                        <div class="jtw-hint">思维链标签会特殊处理：如果只存在闭合标签（如&lt;/think&gt;），会删除从开头到闭合标签的所有内容</div>
+                    </div>
+                </div>
+            </div>
+            
             <!-- 标签页导航 -->
             <div class="jtw-tabs">
                 <button class="jtw-tab active" data-tab="json-extract">JSON提取</button>
@@ -918,44 +963,10 @@ function createSettingsUI() {
             <!-- 角色列表页面 -->
             <div class="jtw-tab-content" id="character-list">
                 <div class="jtw-section">
-                    <h4>模型设置</h4>
+                    <h4>角色列表设置</h4>
                     <div style="margin-bottom: 10px;">
-                        <label>使用模型（留空使用当前模型）</label>
-                        <input type="text" id="jtw-extract-model" class="jtw-input" placeholder="留空使用当前模型" />
-                    </div>
-                </div>
-                
-                <div class="jtw-section">
-                    <h4>提取设置</h4>
-                    <button id="jtw-toggle-extract-settings" class="jtw-btn" style="margin-bottom: 10px;">展开提取设置</button>
-                    <div id="jtw-extract-settings-container" style="display: none;">
-                        <div style="margin-bottom: 10px;">
-                            <label>历史消息数量</label>
-                            <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>仅包括标签（逗号分隔）</label>
-                            <input type="text" id="jtw-include-tags" class="jtw-input" placeholder="main_plot" />
-                            <div class="jtw-hint">只提取这些标签内的内容，留空则不限制</div>
-                        </div>
-                        <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
-                            <input type="checkbox" id="jtw-apply-exclude-after-include" />
-                            <label for="jtw-apply-exclude-after-include">提取包括标签后再执行排除处理</label>
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>排除的标签（逗号分隔）</label>
-                            <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
-                            <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>思维链标签（逗号分隔）</label>
-                            <input type="text" id="jtw-thought-tags" class="jtw-input" placeholder="think,thinking,thought" />
-                            <div class="jtw-hint">思维链标签会特殊处理：如果只存在闭合标签（如&lt;/think&gt;），会删除从开头到闭合标签的所有内容</div>
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>条目名称</label>
-                            <input type="text" id="jtw-character-list-name" class="jtw-input" placeholder="出场角色列表" />
-                        </div>
+                        <label>条目名称</label>
+                        <input type="text" id="jtw-character-list-name" class="jtw-input" placeholder="出场角色列表" />
                     </div>
                 </div>
                 
@@ -1110,7 +1121,20 @@ function createSettingsUI() {
     $('#jtw-character-list-name').val(settings.characterListName || '出场角色列表').on('change', function() {
         settings.characterListName = $(this).val();
         saveSettings();
+    });通用设置折叠按钮
+    $('#jtw-toggle-common-settings').on('click', function() {
+        const $panel = $('#jtw-common-settings-panel');
+        const $button = $(this);
+        if ($panel.is(':visible')) {
+            $panel.slideUp();
+            $button.text('⚙️ 通用设置');
+        } else {
+            $panel.slideDown();
+            $button.text('⚙️ 关闭通用设置');
+        }
     });
+    
+    // 通用设置 - 模型
     
     // 提示词设置（设置初始值）
     const defaultU1 = defaultSettings.promptU1;
@@ -1138,17 +1162,10 @@ function createSettingsUI() {
         saveSettings();
     });
     
-    // 提示词折叠按钮
-    $('#jtw-toggle-prompts').on('click', function() {
-        const $container = $('#jtw-prompts-container');
-        const $button = $(this);
-        if ($container.is(':visible')) {
-            $container.slideUp();
-            $button.text('展开自定义提示词');
-        } else {
-            $container.slideDown();
-            $button.text('收起自定义提示词');
-        }
+    // 角色列表设置
+    $('#jtw-character-list-name').val(settings.characterListName || '出场角色列表').on('change', function() {
+        settings.characterListName = $(this).val();
+        saveSettings();
     });
     
     // 提取设置折叠按钮
@@ -1186,6 +1203,9 @@ function createSettingsUI() {
     });
     
     $('#jtw-character-list-order').val(settings.characterListOrder || 100).on('change', function() {
+    
+    // 移除旧的设置绑定（已移到通用设置中）
+    // （之前的 jtw-character-list-name 绑定已删除，现在在上面）
         settings.characterListOrder = parseInt($(this).val()) || 100;
         saveSettings();
     });
