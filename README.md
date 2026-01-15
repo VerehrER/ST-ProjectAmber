@@ -1,6 +1,7 @@
-# JSON to Worldbook
+# Project Amber
 
 一个 SillyTavern 扩展，用于从 AI 输出中提取 JSON 数据并保存到世界书。
+目前仅此功能。
 
 ## 功能
 
@@ -18,7 +19,7 @@
 3. 点击 **Install Extension**
 4. 输入此仓库的 URL：
    ```
-   https://github.com/your-username/ST-JsonToWorldbook
+   https://github.com/VerehrER/ST-ProjectAmber
    ```
 5. 点击安装
 
