@@ -1633,8 +1633,8 @@ function createSettingsUI() {
                     
                     <div class="jtw-section">
                         <div class="jtw-task-edit-buttons">
-                            <button id="jtw-save-task" class="jtw-btn primary">保存</button>
                             <button id="jtw-cancel-task" class="jtw-btn">取消</button>
+                            <button id="jtw-save-task" class="jtw-btn primary">保存</button>
                         </div>
                     </div>
                 </div>

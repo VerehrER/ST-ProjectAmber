@@ -75,7 +75,7 @@
 }
 
 .jtw-btn.primary {
-    background: var(--SmartThemeChatTintColor) !important;
+    background: var(--SmartThemeChatTintColor);
 }
 
 .jtw-status {
