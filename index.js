@@ -734,25 +734,55 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             }
         }
 
-        // 准备内容数据（删除 keys 和 aliases，避免在内容中重复）
+        // 准备内容数据（删除 keys、aliases 和世界书设置字段，避免在内容中重复）
         const contentData = { ...jsonData };
         delete contentData.keys;
         delete contentData.aliases;
+        delete contentData.constant;
+        delete contentData.selective;
+        delete contentData.position;
+        delete contentData.depth;
+        delete contentData.order;
+        delete contentData.excludeRecursion;
+        delete contentData.preventRecursion;
+        delete contentData.keysecondary;
 
-        // 设置条目属性
-        const position = options.position ?? settings.entryPosition ?? 0;
-        Object.assign(entry, {
+        // 设置条目属性（优先级：jsonData > options > settings > 默认值）
+        const position = jsonData.position ?? options.position ?? settings.entryPosition ?? 0;
+        const entryConfig = {
             key: Array.isArray(keys) ? keys : [keys],
             comment: entryName,
             content: (options.asJson ? JSON.stringify(contentData, null, 2) : jsonToYaml(contentData)) + '\n\n',
-            constant: options.constant ?? false,
-            selective: options.selective ?? true,
+            constant: jsonData.constant ?? options.constant ?? false,
+            selective: jsonData.selective ?? options.selective ?? true,
             disable: options.disable ?? false,
             position: position,
-            depth: position === 4 ? (options.depth ?? settings.depth ?? 4) : undefined,
-            order: options.order ?? settings.entryOrder ?? 100,
-            preventRecursion: true,
-        });
+            order: jsonData.order ?? options.order ?? settings.entryOrder ?? 100,
+        };
+        
+        // depth 只在 position=4 时设置
+        if (position === 4) {
+            entryConfig.depth = jsonData.depth ?? options.depth ?? settings.depth ?? 4;
+        }
+        
+        // 设置递归相关属性（如果 JSON 中有定义）
+        if (jsonData.excludeRecursion !== undefined) {
+            entryConfig.excludeRecursion = jsonData.excludeRecursion;
+        }
+        if (jsonData.preventRecursion !== undefined) {
+            entryConfig.preventRecursion = jsonData.preventRecursion;
+        } else {
+            entryConfig.preventRecursion = true; // 默认启用
+        }
+        
+        // 次要关键词
+        if (jsonData.keysecondary !== undefined) {
+            entryConfig.secondary_keys = Array.isArray(jsonData.keysecondary) 
+                ? jsonData.keysecondary 
+                : [jsonData.keysecondary];
+        }
+        
+        Object.assign(entry, entryConfig);
 
         // 保存世界书
         await saveWorldInfo(targetBook, worldData, true);
