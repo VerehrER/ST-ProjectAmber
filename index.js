@@ -218,18 +218,30 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             return { success: false, error: `无法加载世界书: ${targetBook}` };
         }
 
-        // 动态导入创建条目函数
-        const { createWorldInfoEntry } = await import("../../../world-info.js");
-        
-        // 创建新条目
-        const entry = createWorldInfoEntry(targetBook, worldData);
-        if (!entry) {
-            return { success: false, error: "创建世界书条目失败" };
-        }
-
         // 确定条目名称和关键词
         const entryName = options.name || jsonData.name || jsonData.title || `JSON Entry ${Date.now()}`;
         const keys = options.keys || jsonData.aliases || jsonData.keys || [entryName];
+
+        // 检查是否存在同名条目
+        let entry = null;
+        let isUpdate = false;
+        if (worldData.entries) {
+            const existingEntry = worldData.entries.find(e => e && e.comment === entryName);
+            if (existingEntry) {
+                entry = existingEntry;
+                isUpdate = true;
+                console.log(`[${EXT_NAME}] 找到同名条目，将进行更新: ${entryName} (UID: ${entry.uid})`);
+            }
+        }
+
+        // 如果不存在，创建新条目
+        if (!entry) {
+            const { createWorldInfoEntry } = await import("../../../world-info.js");
+            entry = createWorldInfoEntry(targetBook, worldData);
+            if (!entry) {
+                return { success: false, error: "创建世界书条目失败" };
+            }
+        }
 
         // 设置条目属性
         Object.assign(entry, {
@@ -247,9 +259,9 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
         // 保存世界书
         await saveWorldInfo(targetBook, worldData, true);
 
-        console.log(`[${EXT_NAME}] 条目已保存到 ${targetBook}, UID: ${entry.uid}`);
+        console.log(`[${EXT_NAME}] 条目已${isUpdate ? '更新' : '保存'}到 ${targetBook}, UID: ${entry.uid}`);
         
-        return { success: true, uid: String(entry.uid), worldbook: targetBook };
+        return { success: true, uid: String(entry.uid), worldbook: targetBook, isUpdate };
     } catch (e) {
         console.error(`[${EXT_NAME}] 保存失败:`, e);
         return { success: false, error: e.message };
@@ -451,7 +463,7 @@ async function saveExtractedJson() {
     const result = await saveJsonToWorldbook(json);
     
     if (result.success) {
-        showStatus(`已保存到 ${result.worldbook} (UID: ${result.uid})`);
+        showStatus(`已${result.isUpdate ? '更新' : '保存'}到 ${result.worldbook} (UID: ${result.uid})`);
         settings.lastExtractedJson = null;
         showJsonPreview(null);
         saveSettings();
