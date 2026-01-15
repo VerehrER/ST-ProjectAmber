@@ -1,5 +1,5 @@
 /**
- * JSON to Worldbook Extension
+ * Project Amber Extension
  * 从 AI 输出中提取 JSON 数据并保存到世界书
  */
 
@@ -13,7 +13,7 @@ import {
     METADATA_KEY 
 } from "../../../world-info.js";
 
-const EXT_NAME = "json-to-worldbook";
+const EXT_NAME = "Project Amber";
 const EXT_ID = "JsonToWorldbook";
 
 // 默认设置
@@ -275,7 +275,7 @@ function createSettingsUI() {
     <div id="json-to-worldbook-panel" class="extension_settings">
         <div class="inline-drawer">
             <div class="inline-drawer-toggle inline-drawer-header">
-                <b>JSON to Worldbook</b>
+                <b>Project Amber</b>
                 <div class="inline-drawer-icon fa-solid fa-circle-chevron-down"></div>
             </div>
             <div class="inline-drawer-content">
