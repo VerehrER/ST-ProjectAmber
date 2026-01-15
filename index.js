@@ -749,11 +749,16 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             }
         }
 
+        // 准备内容数据（删除 keys 和 aliases，避免在内容中重复）
+        const contentData = { ...jsonData };
+        delete contentData.keys;
+        delete contentData.aliases;
+
         // 设置条目属性
         Object.assign(entry, {
             key: Array.isArray(keys) ? keys : [keys],
             comment: entryName,
-            content: (options.asJson ? JSON.stringify(jsonData, null, 2) : jsonToYaml(jsonData)) + '\n\n',
+            content: (options.asJson ? JSON.stringify(contentData, null, 2) : jsonToYaml(contentData)) + '\n\n',
             constant: options.constant ?? false,
             selective: options.selective ?? true,
             disable: options.disable ?? false,
