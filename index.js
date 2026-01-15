@@ -775,9 +775,9 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             entryConfig.preventRecursion = true; // 默认启用
         }
         
-        // 次要关键词
+        // 次要关键词（SillyTavern 使用 keysecondary 字段）
         if (jsonData.keysecondary !== undefined) {
-            entryConfig.secondary_keys = Array.isArray(jsonData.keysecondary) 
+            entryConfig.keysecondary = Array.isArray(jsonData.keysecondary) 
                 ? jsonData.keysecondary 
                 : [jsonData.keysecondary];
         }
