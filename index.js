@@ -27,6 +27,8 @@ const defaultSettings = {
     entryOrder: 100,           // 条目排序
     depth: 4,                  // @ Depth 的深度值
     lastExtractedJson: null,   // 上次提取的 JSON
+    // 自定义任务列表
+    customTasks: [],           // 自定义任务条目数组
     // 角色列表提取设置
     extractModel: "",          // 自定义模型名称（留空使用当前模型）
     includeTags: "",           // 仅包括的标签列表（留空则不限制）
@@ -675,6 +677,550 @@ async function extractCharacterList() {
     }
 }
 
+// ==================== 自定义任务功能 ====================
+
+// 当前运行状态
+let isTaskRunning = false;
+// 当前编辑的任务索引（-1表示新建）
+let editingTaskIndex = -1;
+
+/**
+ * 生成唯一ID
+ */
+function generateTaskId() {
+    return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
+/**
+ * 创建默认任务对象
+ */
+function createDefaultTask() {
+    return {
+        id: generateTaskId(),
+        type: 'generate',  // 'generate' 或 'parallel'
+        name: '',
+        promptU1: '',
+        promptA1: '',
+        promptU2: '',
+        promptA2: '',
+        entryTitle: '',
+        entryKeys: '',
+        entryConstant: false,
+        entryPosition: 0,
+        entryDepth: 4,
+        entryOrder: 100,
+        createdAt: Date.now(),
+        updatedAt: Date.now()
+    };
+}
+
+/**
+ * 渲染任务列表
+ */
+function renderTaskList() {
+    const settings = getSettings();
+    const tasks = settings.customTasks || [];
+    const $list = $('#jtw-task-list');
+    
+    if (tasks.length === 0) {
+        $list.html('<div class="jtw-task-empty">暂无自定义任务，点击「新增」创建</div>');
+        return;
+    }
+    
+    const items = tasks.map((task, index) => {
+        const typeIcon = task.type === 'parallel' ? '🔀' : '📝';
+        const typeName = task.type === 'parallel' ? '并行处理' : '生成指令';
+        return `
+            <div class="jtw-task-item" data-index="${index}">
+                <div class="jtw-task-info">
+                    <span class="jtw-task-type-badge">${typeIcon} ${typeName}</span>
+                    <span class="jtw-task-name">${escapeHtml(task.name || '未命名任务')}</span>
+                    <span class="jtw-task-entry-title">→ ${escapeHtml(task.entryTitle || '未设置')}</span>
+                </div>
+                <div class="jtw-task-actions">
+                    <button class="jtw-btn jtw-btn-icon jtw-task-run" data-index="${index}" title="运行">▶️</button>
+                    <button class="jtw-btn jtw-btn-icon jtw-task-edit" data-index="${index}" title="修改">✏️</button>
+                    <button class="jtw-btn jtw-btn-icon jtw-task-export" data-index="${index}" title="导出">📤</button>
+                    <button class="jtw-btn jtw-btn-icon jtw-task-delete" data-index="${index}" title="删除">🗑️</button>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    $list.html(items);
+}
+
+/**
+ * HTML 转义
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * 显示任务列表视图
+ */
+function showTaskListView() {
+    $('#jtw-task-list-view').show();
+    $('#jtw-task-type-view').hide();
+    $('#jtw-task-edit-view').hide();
+    renderTaskList();
+}
+
+/**
+ * 显示任务类型选择视图
+ */
+function showTaskTypeView() {
+    $('#jtw-task-list-view').hide();
+    $('#jtw-task-type-view').show();
+    $('#jtw-task-edit-view').hide();
+}
+
+/**
+ * 显示任务编辑视图
+ */
+function showTaskEditView(task, isNew = true) {
+    $('#jtw-task-list-view').hide();
+    $('#jtw-task-type-view').hide();
+    $('#jtw-task-edit-view').show();
+    
+    // 设置标题
+    $('#jtw-task-edit-title').text(isNew ? '新建生成指令' : '编辑生成指令');
+    
+    // 填充表单
+    $('#jtw-task-name').val(task.name || '');
+    $('#jtw-task-prompt-u1').val(task.promptU1 || '');
+    $('#jtw-task-prompt-a1').val(task.promptA1 || '');
+    $('#jtw-task-prompt-u2').val(task.promptU2 || '');
+    $('#jtw-task-prompt-a2').val(task.promptA2 || '');
+    $('#jtw-task-entry-title').val(task.entryTitle || '');
+    $('#jtw-task-entry-keys').val(task.entryKeys || '');
+    $('#jtw-task-entry-constant').prop('checked', task.entryConstant || false);
+    $('#jtw-task-entry-position').val(task.entryPosition || 0);
+    $('#jtw-task-entry-depth').val(task.entryDepth || 4);
+    $('#jtw-task-entry-order').val(task.entryOrder || 100);
+    
+    // 显示/隐藏深度输入框
+    if (parseInt($('#jtw-task-entry-position').val()) === 4) {
+        $('#jtw-task-depth-container').show();
+    } else {
+        $('#jtw-task-depth-container').hide();
+    }
+}
+
+/**
+ * 从表单获取任务数据
+ */
+function getTaskFromForm() {
+    return {
+        name: $('#jtw-task-name').val().trim(),
+        promptU1: $('#jtw-task-prompt-u1').val(),
+        promptA1: $('#jtw-task-prompt-a1').val(),
+        promptU2: $('#jtw-task-prompt-u2').val(),
+        promptA2: $('#jtw-task-prompt-a2').val(),
+        entryTitle: $('#jtw-task-entry-title').val().trim(),
+        entryKeys: $('#jtw-task-entry-keys').val().trim(),
+        entryConstant: $('#jtw-task-entry-constant').prop('checked'),
+        entryPosition: parseInt($('#jtw-task-entry-position').val()),
+        entryDepth: parseInt($('#jtw-task-entry-depth').val()) || 4,
+        entryOrder: parseInt($('#jtw-task-entry-order').val()) || 100
+    };
+}
+
+/**
+ * 保存任务
+ */
+function saveTask() {
+    const settings = getSettings();
+    if (!settings.customTasks) {
+        settings.customTasks = [];
+    }
+    
+    const formData = getTaskFromForm();
+    
+    // 验证必填字段
+    if (!formData.name) {
+        showTaskStatus('请输入指令名称', true);
+        return;
+    }
+    if (!formData.entryTitle) {
+        showTaskStatus('请输入条目标题', true);
+        return;
+    }
+    
+    if (editingTaskIndex >= 0) {
+        // 更新现有任务
+        const existingTask = settings.customTasks[editingTaskIndex];
+        Object.assign(existingTask, formData, { updatedAt: Date.now() });
+    } else {
+        // 创建新任务
+        const newTask = createDefaultTask();
+        Object.assign(newTask, formData);
+        settings.customTasks.push(newTask);
+    }
+    
+    saveSettings();
+    showTaskListView();
+    showTaskStatus(editingTaskIndex >= 0 ? '任务已更新' : '任务已创建');
+    editingTaskIndex = -1;
+}
+
+/**
+ * 删除任务
+ */
+function deleteTask(index) {
+    const settings = getSettings();
+    if (!settings.customTasks || index < 0 || index >= settings.customTasks.length) {
+        return;
+    }
+    
+    const task = settings.customTasks[index];
+    if (!confirm(`确定要删除任务「${task.name || '未命名'}」吗？`)) {
+        return;
+    }
+    
+    settings.customTasks.splice(index, 1);
+    saveSettings();
+    renderTaskList();
+    showTaskStatus('任务已删除');
+}
+
+/**
+ * 导出单个任务
+ */
+function exportTask(index) {
+    const settings = getSettings();
+    if (!settings.customTasks || index < 0 || index >= settings.customTasks.length) {
+        return;
+    }
+    
+    const task = { ...settings.customTasks[index] };
+    // 移除内部字段
+    delete task.createdAt;
+    delete task.updatedAt;
+    
+    const jsonStr = JSON.stringify(task, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `task_${task.name || 'unnamed'}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    showTaskStatus('任务已导出');
+}
+
+/**
+ * 导入任务
+ */
+function importTasks() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.multiple = true;
+    
+    input.onchange = async (e) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        
+        const settings = getSettings();
+        if (!settings.customTasks) {
+            settings.customTasks = [];
+        }
+        
+        let importedCount = 0;
+        
+        for (const file of files) {
+            try {
+                const text = await file.text();
+                const task = JSON.parse(text);
+                
+                // 验证必要字段
+                if (!task.name || !task.type) {
+                    console.warn(`[${EXT_NAME}] 跳过无效任务文件: ${file.name}`);
+                    continue;
+                }
+                
+                // 生成新ID，避免冲突
+                task.id = generateTaskId();
+                task.createdAt = Date.now();
+                task.updatedAt = Date.now();
+                
+                settings.customTasks.push(task);
+                importedCount++;
+            } catch (err) {
+                console.error(`[${EXT_NAME}] 导入失败: ${file.name}`, err);
+            }
+        }
+        
+        if (importedCount > 0) {
+            saveSettings();
+            renderTaskList();
+            showTaskStatus(`成功导入 ${importedCount} 个任务`);
+        } else {
+            showTaskStatus('没有可导入的有效任务', true);
+        }
+    };
+    
+    input.click();
+}
+
+/**
+ * 运行任务
+ */
+async function runTask(index) {
+    if (isTaskRunning) {
+        showTaskStatus('已有任务正在运行，请等待完成', true);
+        return;
+    }
+    
+    const settings = getSettings();
+    if (!settings.customTasks || index < 0 || index >= settings.customTasks.length) {
+        return;
+    }
+    
+    const task = settings.customTasks[index];
+    
+    if (task.type === 'parallel') {
+        showTaskStatus('并行处理任务暂未实现', true);
+        return;
+    }
+    
+    isTaskRunning = true;
+    
+    // 禁用所有运行按钮
+    $('.jtw-task-run').prop('disabled', true);
+    showTaskStatus(`正在运行: ${task.name}...`);
+    
+    try {
+        const ctx = getContext();
+        const char = ctx.characters?.[ctx.characterId];
+        const description = char?.description || char?.data?.description || '';
+        const persona = ctx.persona || '';
+        const userName = ctx.name1 || '{{user}}';
+        const charName = char?.name || ctx.name2 || '{{char}}';
+        
+        // 获取聊天历史（使用通用设置）
+        const chatHistory = getChatHistory(settings.historyCount || 50);
+        
+        // 获取世界书内容
+        const worldInfo = await getWorldInfoContent();
+        
+        // 构建变量替换函数
+        const replaceVars = (template) => {
+            return template
+                .replace(/\{\{user\}\}/g, userName)
+                .replace(/\{\{char\}\}/g, charName)
+                .replace(/\{\{description\}\}/g, description)
+                .replace(/\{\{persona\}\}/g, persona)
+                .replace(/\{\{worldInfo\}\}/g, worldInfo)
+                .replace(/\{\{chatHistory\}\}/g, chatHistory);
+        };
+        
+        // 构建消息
+        const messages = [
+            { role: 'user', content: replaceVars(task.promptU1 || '') },
+            { role: 'assistant', content: replaceVars(task.promptA1 || '') },
+            { role: 'user', content: replaceVars(task.promptU2 || '') },
+            { role: 'assistant', content: replaceVars(task.promptA2 || '') }
+        ].filter(m => m.content); // 过滤掉空消息
+        
+        if (messages.length === 0) {
+            showTaskStatus('任务提示词为空', true);
+            return;
+        }
+        
+        console.log(`[${EXT_NAME}] 运行任务: ${task.name}`, messages);
+        
+        // 调用 LLM
+        const result = await callLLMJson(messages, true);
+        
+        if (!result) {
+            // 如果不是数组，尝试作为对象处理
+            const objResult = await callLLMJson(messages, false);
+            if (objResult) {
+                // 保存单个对象到世界书
+                const saveResult = await saveJsonToWorldbook(objResult, {
+                    name: task.entryTitle,
+                    keys: task.entryKeys ? task.entryKeys.split(',').map(k => k.trim()) : [task.entryTitle],
+                    constant: task.entryConstant,
+                    position: task.entryPosition,
+                    depth: task.entryDepth,
+                    order: task.entryOrder
+                });
+                
+                if (saveResult.success) {
+                    showTaskStatus(`任务完成: 已${saveResult.isUpdate ? '更新' : '保存'}到世界书`);
+                } else {
+                    showTaskStatus(`保存失败: ${saveResult.error}`, true);
+                }
+            } else {
+                showTaskStatus('未能从AI返回中提取有效数据', true);
+            }
+            return;
+        }
+        
+        // 处理数组结果
+        if (Array.isArray(result) && result.length > 0) {
+            // 使用类似角色列表的保存逻辑
+            const targetBook = settings.targetWorldbook || getCharacterWorldbook();
+            
+            if (!targetBook) {
+                showTaskStatus('未找到有效的世界书', true);
+                return;
+            }
+            
+            // 加载世界书
+            const worldData = await loadWorldInfo(targetBook);
+            if (!worldData) {
+                showTaskStatus('无法加载世界书', true);
+                return;
+            }
+            
+            // 查找或创建条目
+            let entry = null;
+            let existingContent = '';
+            
+            if (worldData.entries && typeof worldData.entries === 'object') {
+                const entriesArray = Object.values(worldData.entries);
+                const existingEntry = entriesArray.find(e => e && e.comment === task.entryTitle);
+                if (existingEntry) {
+                    entry = existingEntry;
+                    existingContent = entry.content || '';
+                }
+            }
+            
+            if (!entry) {
+                const { createWorldInfoEntry } = await import("../../../world-info.js");
+                entry = createWorldInfoEntry(targetBook, worldData);
+            }
+            
+            // 格式化新内容
+            const newContent = result.map(item => jsonToYaml(item, 0)).join('\n\n');
+            const finalContent = existingContent 
+                ? `${existingContent.trim()}\n\n${newContent}\n\n`
+                : `${newContent}\n\n`;
+            
+            // 设置条目属性
+            Object.assign(entry, {
+                comment: task.entryTitle,
+                key: task.entryKeys ? task.entryKeys.split(',').map(k => k.trim()) : [task.entryTitle],
+                content: finalContent,
+                constant: task.entryConstant,
+                selective: true,
+                disable: false,
+                position: task.entryPosition,
+                depth: task.entryPosition === 4 ? task.entryDepth : undefined,
+                order: task.entryOrder
+            });
+            
+            await saveWorldInfo(targetBook, worldData, true);
+            showTaskStatus(`任务完成: 已添加 ${result.length} 个条目到「${task.entryTitle}」`);
+        } else {
+            showTaskStatus('AI返回了空数据', true);
+        }
+        
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 任务运行失败:`, e);
+        showTaskStatus(`运行失败: ${e.message}`, true);
+    } finally {
+        isTaskRunning = false;
+        $('.jtw-task-run').prop('disabled', false);
+    }
+}
+
+/**
+ * 显示任务状态
+ */
+function showTaskStatus(message, isError = false) {
+    const $status = $('#jtw-task-status');
+    $status.text(message)
+        .removeClass('success error')
+        .addClass(isError ? 'error' : 'success')
+        .show();
+    
+    setTimeout(() => $status.fadeOut(), 5000);
+}
+
+/**
+ * 初始化自定义任务事件绑定
+ */
+function initTaskEvents() {
+    // 新增按钮
+    $('#jtw-add-task').on('click', function() {
+        showTaskTypeView();
+    });
+    
+    // 导入按钮
+    $('#jtw-import-tasks').on('click', importTasks);
+    
+    // 取消类型选择
+    $('#jtw-cancel-type-select').on('click', showTaskListView);
+    
+    // 选择生成指令类型
+    $('#jtw-create-generate-task').on('click', function() {
+        editingTaskIndex = -1;
+        showTaskEditView(createDefaultTask(), true);
+    });
+    
+    // 选择并行处理类型（暂时禁用）
+    $('#jtw-create-parallel-task').on('click', function() {
+        showTaskStatus('并行处理功能即将推出', true);
+    });
+    
+    // 取消编辑
+    $('#jtw-cancel-task').on('click', function() {
+        editingTaskIndex = -1;
+        showTaskListView();
+    });
+    
+    // 保存任务
+    $('#jtw-save-task').on('click', saveTask);
+    
+    // 条目位置变化时显示/隐藏深度输入框
+    $('#jtw-task-entry-position').on('change', function() {
+        if (parseInt($(this).val()) === 4) {
+            $('#jtw-task-depth-container').show();
+        } else {
+            $('#jtw-task-depth-container').hide();
+        }
+    });
+    
+    // 任务列表操作按钮（使用事件委托）
+    $('#jtw-task-list').on('click', '.jtw-task-run', function() {
+        const index = parseInt($(this).data('index'));
+        runTask(index);
+    });
+    
+    $('#jtw-task-list').on('click', '.jtw-task-edit', function() {
+        const index = parseInt($(this).data('index'));
+        const settings = getSettings();
+        if (settings.customTasks && settings.customTasks[index]) {
+            editingTaskIndex = index;
+            showTaskEditView(settings.customTasks[index], false);
+        }
+    });
+    
+    $('#jtw-task-list').on('click', '.jtw-task-export', function() {
+        const index = parseInt($(this).data('index'));
+        exportTask(index);
+    });
+    
+    $('#jtw-task-list').on('click', '.jtw-task-delete', function() {
+        const index = parseInt($(this).data('index'));
+        deleteTask(index);
+    });
+    
+    // 初始渲染任务列表
+    renderTaskList();
+}
+
 // ==================== 世界书操作 ====================
 
 /**
@@ -864,6 +1410,7 @@ function createSettingsUI() {
             <div class="jtw-tabs">
                 <button class="jtw-tab active" data-tab="json-extract">JSON提取</button>
                 <button class="jtw-tab" data-tab="character-list">角色列表</button>
+                <button class="jtw-tab" data-tab="custom-tasks">自定义任务</button>
                 <button class="jtw-tab" data-tab="common-settings">⚙️</button>
             </div>
             
@@ -974,6 +1521,122 @@ function createSettingsUI() {
                 <div class="jtw-section">
                     <h4>执行操作</h4>
                     <button id="jtw-extract-characters" class="jtw-btn primary">提取出场角色列表</button>
+                </div>
+            </div>
+            
+            <!-- 自定义任务页面 -->
+            <div class="jtw-tab-content" id="custom-tasks">
+                <!-- 任务列表视图 -->
+                <div id="jtw-task-list-view">
+                    <div class="jtw-section">
+                        <div class="jtw-task-header">
+                            <h4>任务列表</h4>
+                            <div class="jtw-task-header-buttons">
+                                <button id="jtw-import-tasks" class="jtw-btn jtw-btn-small">📥 导入</button>
+                                <button id="jtw-add-task" class="jtw-btn jtw-btn-small primary">➕ 新增</button>
+                            </div>
+                        </div>
+                        <div id="jtw-task-list" class="jtw-task-list">
+                            <!-- 任务条目将在这里动态生成 -->
+                            <div class="jtw-task-empty">暂无自定义任务，点击「新增」创建</div>
+                        </div>
+                    </div>
+                    <div id="jtw-task-status" class="jtw-status" style="display: none;"></div>
+                </div>
+                
+                <!-- 任务类型选择视图 -->
+                <div id="jtw-task-type-view" style="display: none;">
+                    <div class="jtw-section">
+                        <h4>选择任务类型</h4>
+                        <div class="jtw-task-type-options">
+                            <button id="jtw-create-generate-task" class="jtw-task-type-btn">
+                                <span class="jtw-task-type-icon">📝</span>
+                                <span class="jtw-task-type-name">生成指令</span>
+                                <span class="jtw-task-type-desc">调用AI生成内容并保存到世界书</span>
+                            </button>
+                            <button id="jtw-create-parallel-task" class="jtw-task-type-btn" disabled>
+                                <span class="jtw-task-type-icon">🔀</span>
+                                <span class="jtw-task-type-name">并行处理</span>
+                                <span class="jtw-task-type-desc">同时执行多个子任务（即将推出）</span>
+                            </button>
+                        </div>
+                        <div style="margin-top: 15px;">
+                            <button id="jtw-cancel-type-select" class="jtw-btn">取消</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任务编辑视图 -->
+                <div id="jtw-task-edit-view" style="display: none;">
+                    <div class="jtw-section">
+                        <h4 id="jtw-task-edit-title">新建生成指令</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label>指令名称 <span class="jtw-required">*</span></label>
+                            <input type="text" id="jtw-task-name" class="jtw-input" placeholder="例如：提取场景信息" />
+                        </div>
+                    </div>
+                    
+                    <div class="jtw-section">
+                        <h4>提示词设置</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label>User 消息 1</label>
+                            <textarea id="jtw-task-prompt-u1" class="jtw-input" rows="2" placeholder="系统角色设定..."></textarea>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>Assistant 消息 1</label>
+                            <textarea id="jtw-task-prompt-a1" class="jtw-input" rows="2" placeholder="确认理解..."></textarea>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>User 消息 2</label>
+                            <textarea id="jtw-task-prompt-u2" class="jtw-input" rows="8" placeholder="包含{{变量}}的主提示词..."></textarea>
+                            <div class="jtw-hint">可用变量: {{user}}, {{char}}, {{description}}, {{persona}}, {{worldInfo}}, {{chatHistory}}</div>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>Assistant 消息 2</label>
+                            <textarea id="jtw-task-prompt-a2" class="jtw-input" rows="1" placeholder="开始生成..."></textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="jtw-section">
+                        <h4>世界书设置</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label>条目标题（用于判断创建或更新）<span class="jtw-required">*</span></label>
+                            <input type="text" id="jtw-task-entry-title" class="jtw-input" placeholder="例如：场景信息" />
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>关键词（逗号分隔，留空使用标题）</label>
+                            <input type="text" id="jtw-task-entry-keys" class="jtw-input" placeholder="关键词1,关键词2" />
+                        </div>
+                        <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                            <input type="checkbox" id="jtw-task-entry-constant" />
+                            <label for="jtw-task-entry-constant">始终启用（Constant）</label>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>条目位置</label>
+                            <select id="jtw-task-entry-position" class="jtw-select">
+                                <option value="0">角色定义之前</option>
+                                <option value="1">角色定义之后</option>
+                                <option value="2">作者注释之前</option>
+                                <option value="3">作者注释之后</option>
+                                <option value="4">@ Depth</option>
+                            </select>
+                        </div>
+                        <div id="jtw-task-depth-container" style="margin-bottom: 10px; display: none;">
+                            <label>深度值 (Depth)</label>
+                            <input type="number" id="jtw-task-entry-depth" class="jtw-input" value="4" min="0" max="999" />
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>排序优先级</label>
+                            <input type="number" id="jtw-task-entry-order" class="jtw-input" value="100" min="0" />
+                        </div>
+                    </div>
+                    
+                    <div class="jtw-section">
+                        <div class="jtw-task-edit-buttons">
+                            <button id="jtw-cancel-task" class="jtw-btn">取消</button>
+                            <button id="jtw-save-task" class="jtw-btn primary">保存</button>
+                        </div>
+                    </div>
                 </div>
             </div>
             
@@ -1322,6 +1985,9 @@ jQuery(async () => {
     
     // 创建设置界面
     createSettingsUI();
+    
+    // 初始化自定义任务事件
+    initTaskEvents();
     
     // 监听消息事件
     eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);

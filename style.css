@@ -144,3 +144,158 @@
     opacity: 0.5;
     cursor: not-allowed;
 }
+
+/* ==================== 自定义任务样式 ==================== */
+
+/* 任务头部 */
+.jtw-task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.jtw-task-header h4 {
+    margin: 0;
+}
+
+.jtw-task-header-buttons {
+    display: flex;
+    gap: 5px;
+}
+
+.jtw-btn-small {
+    padding: 5px 10px;
+    font-size: 12px;
+    margin: 0;
+}
+
+/* 任务列表 */
+.jtw-task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.jtw-task-empty {
+    text-align: center;
+    color: var(--SmartThemeEmColor);
+    padding: 20px;
+    opacity: 0.7;
+}
+
+.jtw-task-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: var(--SmartThemeBlurTintColor);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    transition: background 0.2s;
+}
+
+.jtw-task-item:hover {
+    background: var(--SmartThemeQuoteColor);
+}
+
+.jtw-task-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex: 1;
+    min-width: 0;
+}
+
+.jtw-task-type-badge {
+    font-size: 11px;
+    opacity: 0.7;
+}
+
+.jtw-task-name {
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jtw-task-entry-title {
+    font-size: 12px;
+    opacity: 0.7;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.jtw-task-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.jtw-btn-icon {
+    padding: 5px 8px;
+    margin: 0;
+    font-size: 14px;
+    min-width: 32px;
+}
+
+/* 任务类型选择 */
+.jtw-task-type-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.jtw-task-type-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 15px;
+    background: var(--SmartThemeBlurTintColor);
+    border: 2px solid var(--SmartThemeBorderColor);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: left;
+}
+
+.jtw-task-type-btn:hover:not(:disabled) {
+    border-color: var(--SmartThemeChatTintColor);
+    background: var(--SmartThemeQuoteColor);
+}
+
+.jtw-task-type-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.jtw-task-type-icon {
+    font-size: 24px;
+    margin-bottom: 5px;
+}
+
+.jtw-task-type-name {
+    font-weight: bold;
+    font-size: 14px;
+    color: var(--SmartThemeBodyColor);
+}
+
+.jtw-task-type-desc {
+    font-size: 12px;
+    opacity: 0.7;
+    margin-top: 5px;
+}
+
+/* 任务编辑按钮区域 */
+.jtw-task-edit-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* 必填标记 */
+.jtw-required {
+    color: #f44336;
+}
