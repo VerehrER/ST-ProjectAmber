@@ -29,6 +29,8 @@ const defaultSettings = {
     lastExtractedJson: null,   // 上次提取的 JSON
     // 角色列表提取设置
     extractModel: "",          // 自定义模型名称（留空使用当前模型）
+    includeTags: "",           // 仅包括的标签列表（留空则不限制）
+    applyExcludeAfterInclude: false,  // 提取包括标签后是否再执行排除处理
     excludeTags: "summary,safety",  // 要排除的标签列表
     thoughtTags: "think,thinking,thought",  // 思维链标签（会处理孤立闭合标签）
     historyCount: 50,          // 发送的历史消息数量
@@ -194,6 +196,35 @@ function extractJson(input, isArray = false) {
 // ==================== 角色列表提取 ====================
 
 /**
+ * 仅提取指定标签内的内容，删除其他所有内容
+ * @param {string} text - 输入文本
+ * @param {string} tagsString - 逗号分隔的标签列表
+ * @returns {string}
+ */
+function extractIncludeTags(text, tagsString) {
+    if (!text || !tagsString) return text;
+    
+    const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
+    if (tags.length === 0) return text;
+    
+    let extractedContent = [];
+    
+    for (const tag of tags) {
+        // 匹配所有 <tag>...</tag> 格式的内容
+        const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+        let match;
+        while ((match = regex.exec(text)) !== null) {
+            extractedContent.push(match[1].trim());
+        }
+    }
+    
+    // 如果没有找到任何匹配，返回空字符串
+    if (extractedContent.length === 0) return '';
+    
+    return extractedContent.join('\n\n');
+}
+
+/**
  * 根据设置中的标签列表，从文本中移除指定标签的内容
  * @param {string} text - 输入文本
  * @param {string} tagsString - 逗号分隔的标签列表
@@ -280,8 +311,18 @@ function getChatHistory(count) {
         const name = msg.is_user ? (ctx.name1 || '{{user}}') : (msg.name || ctx.name2 || '{{char}}');
         let content = msg.mes || '';
         
-        // 移除指定标签内容
-        content = removeTaggedContent(content, settings.excludeTags);
+        // 1. 先处理仅包括标签（如果设置了）
+        if (settings.includeTags && settings.includeTags.trim()) {
+            content = extractIncludeTags(content, settings.includeTags);
+            
+            // 如果开启了额外排除处理，则继续处理
+            if (settings.applyExcludeAfterInclude && content) {
+                content = removeTaggedContent(content, settings.excludeTags);
+            }
+        } else {
+            // 2. 没有仅包括标签时，直接移除排除标签内容
+            content = removeTaggedContent(content, settings.excludeTags);
+        }
         
         return `${name}: ${content}`;
     });
@@ -893,6 +934,15 @@ function createSettingsUI() {
                             <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
                         </div>
                         <div style="margin-bottom: 10px;">
+                            <label>仅包括标签（逗号分隔）</label>
+                            <input type="text" id="jtw-include-tags" class="jtw-input" placeholder="main_plot" />
+                            <div class="jtw-hint">只提取这些标签内的内容，留空则不限制</div>
+                        </div>
+                        <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                            <input type="checkbox" id="jtw-apply-exclude-after-include" />
+                            <label for="jtw-apply-exclude-after-include">提取包括标签后再执行排除处理</label>
+                        </div>
+                        <div style="margin-bottom: 10px;">
                             <label>排除的标签（逗号分隔）</label>
                             <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
                             <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
@@ -1034,6 +1084,16 @@ function createSettingsUI() {
     
     $('#jtw-history-count').val(settings.historyCount || 50).on('change', function() {
         settings.historyCount = parseInt($(this).val()) || 50;
+        saveSettings();
+    });
+    
+    $('#jtw-include-tags').val(settings.includeTags || '').on('change', function() {
+        settings.includeTags = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-apply-exclude-after-include').prop('checked', settings.applyExcludeAfterInclude || false).on('change', function() {
+        settings.applyExcludeAfterInclude = $(this).prop('checked');
         saveSettings();
     });
     
