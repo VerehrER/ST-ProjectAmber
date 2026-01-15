@@ -90,3 +90,15 @@
     background: var(--SmartThemeBlurTintColor);
     color: var(--SmartThemeBodyColor);
 }
+
+.jtw-hint {
+    font-size: 0.85em;
+    color: var(--SmartThemeEmColor);
+    margin-top: 4px;
+    opacity: 0.8;
+}
+
+.jtw-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

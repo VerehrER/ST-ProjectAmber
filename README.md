@@ -119,4 +119,4 @@ MIT License
 
 ## 致谢
 
-参考了 [LittleWhiteBox](https://github.com/example/LittleWhiteBox) 项目的实现。
+参考了 [LittleWhiteBox](https://github.com/RT15548/LittleWhiteBox) 项目的实现。

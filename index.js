@@ -12,6 +12,8 @@ import {
     world_info,
     METADATA_KEY 
 } from "../../../world-info.js";
+import { oai_settings, getChatCompletionModel, chat_completion_sources } from "../../../openai.js";
+import { ChatCompletionService } from "../../../custom-request.js";
 
 const EXT_NAME = "Project Amber";
 const EXT_ID = "JsonToWorldbook";
@@ -24,6 +26,10 @@ const defaultSettings = {
     entryPosition: 0,          // 条目插入位置
     entryOrder: 100,           // 条目排序
     lastExtractedJson: null,   // 上次提取的 JSON
+    // 角色列表提取设置
+    extractModel: "",          // 自定义模型名称（留空使用当前模型）
+    excludeTags: "think,thinking,summary,safety,example,examples,ooc",  // 要排除的标签列表
+    historyCount: 50,          // 发送的历史消息数量
 };
 
 // ==================== JSON 解析工具 ==================== 
@@ -143,6 +149,433 @@ function extractJson(input, isArray = false) {
     }
 
     return null;
+}
+
+// ==================== 角色列表提取 ====================
+
+// 默认提示词配置
+const DEFAULT_PROMPTS = {
+    extractCharacters: {
+        u1: `你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。`,
+        a1: `明白。请提供【世界观】和【剧情经历】，我将提取角色并以JSON数组输出。`,
+        u2: `### 上下文
+
+**1. 世界观：**
+<world_info>
+{{description}}
+玩家角色：{{user}}
+{{persona}}
+</world_info>
+
+**2. {{user}}经历：**
+<chat_history>
+{{chatHistory}}
+</chat_history>
+
+{{existingCharacters}}
+
+### 输出要求
+
+1. 返回一个合法 JSON 数组，使用标准 JSON 语法（键名和字符串都用半角双引号 "）
+2. 只提取有具体称呼的角色（不包括{{user}}自己）
+3. 每个角色需要 name / location / info 三个字段
+4. 文本内容中如需使用引号，请使用单引号或中文引号「」或""，不要使用半角双引号 "
+5. 如果没有新角色返回 []
+
+模板：[{ "name": "角色名", "location": "当前/最后出现的地点", "info": "一句话简介，包括外貌特征和身份" }]`,
+        a2: `了解，开始生成JSON:`
+    }
+};
+
+/**
+ * 根据设置中的标签列表，从文本中移除指定标签的内容
+ * @param {string} text - 输入文本
+ * @param {string} tagsString - 逗号分隔的标签列表
+ * @returns {string}
+ */
+function removeTaggedContent(text, tagsString) {
+    if (!text || !tagsString) return text;
+    
+    const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
+    let result = text;
+    
+    for (const tag of tags) {
+        // 匹配 <tag>...</tag> 格式，包括多行内容
+        const regex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+        result = result.replace(regex, '');
+    }
+    
+    return result.trim();
+}
+
+/**
+ * 获取聊天历史并进行预处理
+ * @param {number} count - 获取的消息数量
+ * @returns {string}
+ */
+function getChatHistory(count) {
+    const ctx = getContext();
+    const chat = ctx.chat || [];
+    const settings = getSettings();
+    
+    const recentMessages = chat.slice(-count);
+    const lines = recentMessages.map(msg => {
+        const name = msg.is_user ? (ctx.name1 || '{{user}}') : (msg.name || ctx.name2 || '{{char}}');
+        let content = msg.mes || '';
+        
+        // 移除指定标签内容
+        content = removeTaggedContent(content, settings.excludeTags);
+        
+        return `${name}: ${content}`;
+    });
+    
+    return lines.join('\n\n');
+}
+
+/**
+ * 构建角色提取的消息
+ * @param {object} vars - 变量对象
+ * @returns {Array}
+ */
+function buildExtractCharactersMessages(vars) {
+    const prompts = DEFAULT_PROMPTS.extractCharacters;
+    
+    const replaceVars = (template) => {
+        return template
+            .replace(/\{\{user\}\}/g, vars.userName || '{{user}}')
+            .replace(/\{\{char\}\}/g, vars.charName || '{{char}}')
+            .replace(/\{\{description\}\}/g, vars.description || '')
+            .replace(/\{\{persona\}\}/g, vars.persona || '')
+            .replace(/\{\{chatHistory\}\}/g, vars.chatHistory || '')
+            .replace(/\{\{existingCharacters\}\}/g, vars.existingCharacters || '');
+    };
+    
+    return [
+        { role: 'user', content: replaceVars(prompts.u1) },
+        { role: 'assistant', content: replaceVars(prompts.a1) },
+        { role: 'user', content: replaceVars(prompts.u2) },
+        { role: 'assistant', content: replaceVars(prompts.a2) }
+    ];
+}
+
+/**
+ * 调用 LLM API
+ * @param {Array} messages - 消息数组
+ * @returns {Promise<string>}
+ */
+async function callLLM(messages) {
+    const settings = getSettings();
+    
+    // 获取当前 API 源
+    const source = oai_settings?.chat_completion_source;
+    if (!source) {
+        throw new Error('未配置 API，请先在酒馆中配置 API');
+    }
+    
+    // 获取模型
+    const model = settings.extractModel?.trim() || getChatCompletionModel();
+    if (!model) {
+        throw new Error('未检测到模型，请在设置中指定模型或在酒馆中选择模型');
+    }
+    
+    console.log(`[${EXT_NAME}] 调用 LLM: source=${source}, model=${model}`);
+    
+    // 构建请求体
+    const body = {
+        stream: false,
+        messages,
+        model,
+        chat_completion_source: source,
+        max_tokens: oai_settings?.openai_max_tokens || 4096,
+        temperature: oai_settings?.temp_openai ?? 0.7,
+    };
+    
+    // 处理代理设置
+    const PROXY_SUPPORTED = new Set([
+        chat_completion_sources.OPENAI,
+        chat_completion_sources.CLAUDE,
+        chat_completion_sources.MAKERSUITE,
+        chat_completion_sources.DEEPSEEK,
+    ]);
+    
+    if (PROXY_SUPPORTED.has(source) && oai_settings?.reverse_proxy) {
+        body.reverse_proxy = String(oai_settings.reverse_proxy).replace(/\/?$/, '');
+        if (oai_settings?.proxy_password) {
+            body.proxy_password = String(oai_settings.proxy_password);
+        }
+    }
+    
+    if (source === chat_completion_sources.CUSTOM) {
+        if (oai_settings?.custom_url) {
+            body.custom_url = String(oai_settings.custom_url);
+        }
+        if (oai_settings?.custom_include_headers) {
+            body.custom_include_headers = oai_settings.custom_include_headers;
+        }
+        if (oai_settings?.custom_include_body) {
+            body.custom_include_body = oai_settings.custom_include_body;
+        }
+        if (oai_settings?.custom_exclude_body) {
+            body.custom_exclude_body = oai_settings.custom_exclude_body;
+        }
+    }
+    
+    // 发送请求
+    const payload = ChatCompletionService.createRequestData(body);
+    const response = await ChatCompletionService.sendRequest(payload, false);
+    
+    // 解析响应
+    let result = '';
+    if (response && typeof response === 'object') {
+        const msg = response?.choices?.[0]?.message;
+        result = String(
+            msg?.content ??
+            msg?.reasoning_content ??
+            response?.choices?.[0]?.text ??
+            response?.content ??
+            response?.reasoning_content ??
+            ''
+        );
+    } else {
+        result = String(response ?? '');
+    }
+    
+    return result;
+}
+
+/**
+ * 调用 LLM 并解析 JSON 结果
+ * @param {Array} messages - 消息数组
+ * @param {boolean} isArray - 是否期望返回数组
+ * @returns {Promise<object|array|null>}
+ */
+async function callLLMJson(messages, isArray = false) {
+    try {
+        const result = await callLLM(messages);
+        console.log(`[${EXT_NAME}] LLM 返回:`, result.slice(0, 500));
+        
+        const parsed = extractJson(result, isArray);
+        if (parsed) {
+            console.log(`[${EXT_NAME}] 解析成功:`, parsed);
+            return parsed;
+        }
+        
+        console.warn(`[${EXT_NAME}] JSON 解析失败`);
+        return null;
+    } catch (e) {
+        console.error(`[${EXT_NAME}] LLM 调用失败:`, e);
+        throw e;
+    }
+}
+
+/**
+ * 获取已存在的角色列表（从世界书）
+ * @returns {Promise<Array>}
+ */
+async function getExistingCharacters() {
+    const settings = getSettings();
+    let targetBook = settings.targetWorldbook || getCharacterWorldbook();
+    
+    if (!targetBook) return [];
+    
+    try {
+        const worldData = await loadWorldInfo(targetBook);
+        if (!worldData?.entries) return [];
+        
+        const entriesArray = Object.values(worldData.entries);
+        const characterListEntry = entriesArray.find(e => e && e.comment === '出场角色列表');
+        
+        if (!characterListEntry?.content) return [];
+        
+        // 尝试解析已有内容中的角色
+        const existingNames = [];
+        const lines = characterListEntry.content.split('\n');
+        for (const line of lines) {
+            const match = line.match(/^-?\s*name:\s*(.+)$/i) || line.match(/^\s*-\s*(.+?)[:：]/);
+            if (match) {
+                existingNames.push(match[1].trim());
+            }
+        }
+        
+        return existingNames;
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 获取已有角色失败:`, e);
+        return [];
+    }
+}
+
+/**
+ * 保存角色列表到世界书（追加模式）
+ * @param {Array} characters - 角色列表
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function saveCharacterListToWorldbook(characters) {
+    try {
+        const settings = getSettings();
+        const entryName = '出场角色列表';
+        
+        // 确定目标世界书
+        let targetBook = settings.targetWorldbook || getCharacterWorldbook();
+        
+        if (!targetBook || !world_names?.includes(targetBook)) {
+            return { success: false, error: "未找到有效的世界书，请先绑定或选择世界书" };
+        }
+
+        // 加载世界书
+        const worldData = await loadWorldInfo(targetBook);
+        if (!worldData) {
+            return { success: false, error: `无法加载世界书: ${targetBook}` };
+        }
+
+        // 查找或创建条目
+        let entry = null;
+        let existingContent = '';
+        
+        if (worldData.entries && typeof worldData.entries === 'object') {
+            const entriesArray = Object.values(worldData.entries);
+            const existingEntry = entriesArray.find(e => e && e.comment === entryName);
+            if (existingEntry) {
+                entry = existingEntry;
+                existingContent = entry.content || '';
+                console.log(`[${EXT_NAME}] 找到已有条目，将追加内容`);
+            }
+        }
+
+        // 如果不存在，创建新条目
+        if (!entry) {
+            const { createWorldInfoEntry } = await import("../../../world-info.js");
+            entry = createWorldInfoEntry(targetBook, worldData);
+            if (!entry) {
+                return { success: false, error: "创建世界书条目失败" };
+            }
+        }
+
+        // 格式化新角色内容
+        const newContent = characters.map(char => {
+            return `- ${char.name}:\n  location: ${char.location || '未知'}\n  info: ${char.info || '无描述'}`;
+        }).join('\n\n');
+
+        // 合并内容（追加到底部）
+        const finalContent = existingContent 
+            ? `${existingContent.trim()}\n\n${newContent}`
+            : newContent;
+
+        // 收集所有角色名作为关键词
+        const allNames = [];
+        const lines = finalContent.split('\n');
+        for (const line of lines) {
+            const match = line.match(/^-\s*([^:]+):/);
+            if (match) {
+                allNames.push(match[1].trim());
+            }
+        }
+
+        // 设置条目属性
+        Object.assign(entry, {
+            key: allNames.length > 0 ? allNames : [entryName],
+            comment: entryName,
+            content: finalContent,
+            constant: false,
+            selective: true,
+            disable: false,
+            position: settings.entryPosition ?? 0,
+            order: settings.entryOrder ?? 100,
+            preventRecursion: true,
+        });
+
+        // 保存世界书
+        await saveWorldInfo(targetBook, worldData, true);
+
+        console.log(`[${EXT_NAME}] 角色列表已保存到 ${targetBook}, UID: ${entry.uid}`);
+        
+        return { success: true, uid: String(entry.uid), worldbook: targetBook, count: characters.length };
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 保存角色列表失败:`, e);
+        return { success: false, error: e.message };
+    }
+}
+
+/**
+ * 执行角色列表提取
+ */
+async function extractCharacterList() {
+    const settings = getSettings();
+    const ctx = getContext();
+    
+    showStatus("正在提取角色列表...");
+    $('#jtw-extract-characters').prop('disabled', true);
+    
+    try {
+        // 获取基本信息
+        const char = ctx.characters?.[ctx.characterId];
+        const description = char?.description || char?.data?.description || '';
+        const persona = ctx.persona || '';
+        const userName = ctx.name1 || '{{user}}';
+        const charName = char?.name || ctx.name2 || '{{char}}';
+        
+        // 获取聊天历史
+        const chatHistory = getChatHistory(settings.historyCount || 50);
+        
+        // 获取已有角色
+        const existingNames = await getExistingCharacters();
+        const existingCharacters = existingNames.length > 0 
+            ? `\n\n**已存在角色（不要重复）：** ${existingNames.join('、')}`
+            : '';
+        
+        // 构建消息
+        const messages = buildExtractCharactersMessages({
+            userName,
+            charName,
+            description,
+            persona,
+            chatHistory,
+            existingCharacters
+        });
+        
+        console.log(`[${EXT_NAME}] 开始提取角色...`);
+        
+        // 调用 LLM
+        const result = await callLLMJson(messages, true);
+        
+        if (!result || !Array.isArray(result)) {
+            showStatus("未能提取到角色数据", true);
+            return;
+        }
+        
+        if (result.length === 0) {
+            showStatus("没有发现新角色");
+            return;
+        }
+        
+        // 过滤掉已存在的角色
+        const newCharacters = result.filter(c => 
+            c.name && !existingNames.some(en => 
+                en.toLowerCase() === c.name.toLowerCase()
+            )
+        );
+        
+        if (newCharacters.length === 0) {
+            showStatus("没有发现新角色（所有角色已存在）");
+            return;
+        }
+        
+        console.log(`[${EXT_NAME}] 发现 ${newCharacters.length} 个新角色:`, newCharacters);
+        
+        // 保存到世界书
+        const saveResult = await saveCharacterListToWorldbook(newCharacters);
+        
+        if (saveResult.success) {
+            showStatus(`成功添加 ${saveResult.count} 个角色到「出场角色列表」`);
+        } else {
+            showStatus(saveResult.error, true);
+        }
+        
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 提取角色失败:`, e);
+        showStatus(`提取失败: ${e.message}`, true);
+    } finally {
+        $('#jtw-extract-characters').prop('disabled', false);
+    }
 }
 
 // ==================== 世界书操作 ====================
@@ -334,6 +767,24 @@ function createSettingsUI() {
                 <div id="jtw-status" class="jtw-status" style="display: none;"></div>
                 <div id="jtw-json-preview" class="jtw-json-preview" style="display: none;"></div>
             </div>
+            
+            <div class="jtw-section">
+                <h4>角色列表提取</h4>
+                <div style="margin-bottom: 10px;">
+                    <label>使用模型（留空使用当前模型）</label>
+                    <input type="text" id="jtw-extract-model" class="jtw-input" placeholder="留空使用当前模型" />
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>历史消息数量</label>
+                    <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
+                </div>
+                <div style="margin-bottom: 10px;">
+                    <label>排除的标签（逗号分隔）</label>
+                    <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
+                    <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
+                </div>
+                <button id="jtw-extract-characters" class="jtw-btn primary">提取出场角色列表</button>
+            </div>
         </div>
     </div>`;
 
@@ -375,6 +826,25 @@ function createSettingsUI() {
     
     // 保存按钮
     $('#jtw-save-to-wb').on('click', saveExtractedJson);
+    
+    // 角色列表提取设置
+    $('#jtw-extract-model').val(settings.extractModel || '').on('change', function() {
+        settings.extractModel = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-history-count').val(settings.historyCount || 50).on('change', function() {
+        settings.historyCount = parseInt($(this).val()) || 50;
+        saveSettings();
+    });
+    
+    $('#jtw-exclude-tags').val(settings.excludeTags || '').on('change', function() {
+        settings.excludeTags = $(this).val();
+        saveSettings();
+    });
+    
+    // 提取角色按钮
+    $('#jtw-extract-characters').on('click', extractCharacterList);
 }
 
 function updateWorldbookSelect() {
@@ -502,6 +972,7 @@ window.JsonToWorldbook = {
     saveJsonToWorldbook,
     getAvailableWorldbooks,
     getCharacterWorldbook,
+    extractCharacterList,
 };
 
 // ==================== 初始化 ====================
