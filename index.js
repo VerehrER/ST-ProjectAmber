@@ -4,7 +4,8 @@
  */
 
 import { extension_settings, getContext } from "../../../extensions.js";
-import { eventSource, event_types, saveSettingsDebounced, power_user } from "../../../../script.js";
+import { eventSource, event_types, saveSettingsDebounced } from "../../../../script.js";
+import { renderStoryString, power_user } from "../../../../power-user.js";
 import { 
     loadWorldInfo, 
     saveWorldInfo, 
