@@ -14,6 +14,7 @@ import {
 } from "../../../world-info.js";
 import { oai_settings, getChatCompletionModel, chat_completion_sources } from "../../../openai.js";
 import { ChatCompletionService } from "../../../custom-request.js";
+import { power_user } from "../../../power-user.js";
 
 const EXT_NAME = "Project Amber";
 const EXT_ID = "JsonToWorldbook";
