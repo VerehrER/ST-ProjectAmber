@@ -12,22 +12,14 @@
 
 ## 安装
 
-### 方法 1：通过 URL 安装（推荐）
-
 1. 打开 SillyTavern
 2. 进入 **Extensions** 面板
 3. 点击 **Install Extension**
 4. 输入此仓库的 URL：
    ```
-   https://github.com/VerehrER/ST-ProjectAmber
+   https://github.com/Pratendent/ST-ProjectAmber
    ```
 5. 点击安装
-
-### 方法 2：手动安装
-
-1. 下载此仓库
-2. 将文件夹复制到 `SillyTavern/data/<user>/extensions/third-party/`
-3. 重启 SillyTavern
 
 ## 使用方法
 
