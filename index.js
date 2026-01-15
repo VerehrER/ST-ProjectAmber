@@ -234,40 +234,46 @@ function extractIncludeTags(text, tagsString) {
  * @returns {string}
  */
 function removeTaggedContent(text, tagsString) {
-    if (!text || !tagsString) return text;
+    if (!text) return text;
     
-    const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
     let result = text;
-    
-    // 思维链相关的标签（需要处理孤立闭合标签）
     const settings = getSettings();
-    const thoughtTagsStr = settings.thoughtTags || 'think,thinking,thought';
-    const thoughtTags = thoughtTagsStr.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
     
-    for (const tag of tags) {
-        // 1. 先匹配完整的 <tag>...</tag> 格式，包括多行内容
+    // 1. 处理排除标签列表（删除完整配对的标签内容）
+    if (tagsString) {
+        const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
+        for (const tag of tags) {
+            const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+            result = result.replace(pairRegex, '');
+        }
+    }
+    
+    // 2. 独立处理思维链标签（处理孤立闭合标签）
+    const thoughtTagsStr = settings.thoughtTags || 'think,thinking,thought';
+    const thoughtTags = thoughtTagsStr.split(',').map(t => t.trim()).filter(t => t);
+    
+    for (const tag of thoughtTags) {
+        // 先删除完整配对的思维链标签
         const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
         result = result.replace(pairRegex, '');
         
-        // 2. 仅对思维链标签：处理孤立的闭合标签
-        if (thoughtTags.includes(tag.toLowerCase())) {
-            if (settings.aggressiveThoughtRemoval) {
-                // 激进模式：找到最后一个闭合标签，删除它之前的所有内容
-                const lastCloseRegex = new RegExp(`^[\\s\\S]*<\\/${tag}>`, 'i');
-                if (lastCloseRegex.test(result)) {
-                    result = result.replace(lastCloseRegex, '');
-                }
-            } else {
-                // 标准模式：只有当存在孤立闭合标签时才删除
-                const closeTagRegex = new RegExp(`<\\/${tag}>`, 'i');
-                const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'i');
-                
-                // 如果存在闭合标签但不存在开启标签，说明是跨消息的思维链
-                if (closeTagRegex.test(result) && !openTagRegex.test(result)) {
-                    // 删除从开头到闭合标签（包括闭合标签）的所有内容
-                    const deleteRegex = new RegExp(`^[\\s\\S]*?<\\/${tag}>`, 'i');
-                    result = result.replace(deleteRegex, '');
-                }
+        // 然后处理孤立闭合标签
+        if (settings.aggressiveThoughtRemoval) {
+            // 激进模式：找到最后一个闭合标签，删除它之前的所有内容
+            const lastCloseRegex = new RegExp(`^[\\s\\S]*<\\/${tag}>`, 'i');
+            if (lastCloseRegex.test(result)) {
+                result = result.replace(lastCloseRegex, '');
+            }
+        } else {
+            // 标准模式：只有当存在孤立闭合标签时才删除
+            const closeTagRegex = new RegExp(`<\\/${tag}>`, 'i');
+            const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'i');
+            
+            // 如果存在闭合标签但不存在开启标签，说明是跨消息的思维链
+            if (closeTagRegex.test(result) && !openTagRegex.test(result)) {
+                // 删除从开头到闭合标签（包括闭合标签）的所有内容
+                const deleteRegex = new RegExp(`^[\\s\\S]*?<\\/${tag}>`, 'i');
+                result = result.replace(deleteRegex, '');
             }
         }
     }
@@ -983,6 +989,73 @@ function importTasks() {
 }
 
 /**
+ * 预览任务提示词
+ */
+async function previewTaskPrompt(index) {
+    const settings = getSettings();
+    if (!settings.customTasks || index < 0 || index >= settings.customTasks.length) {
+        return;
+    }
+    
+    const task = settings.customTasks[index];
+    
+    try {
+        const ctx = getContext();
+        const char = ctx.characters?.[ctx.characterId];
+        const description = char?.description || char?.data?.description || '';
+        const persona = ctx.persona || '';
+        const userName = ctx.name1 || '{{user}}';
+        const charName = char?.name || ctx.name2 || '{{char}}';
+        
+        // 获取聊天历史
+        const chatHistory = getChatHistory(settings.historyCount || 50);
+        
+        // 获取世界书内容
+        const worldInfo = await getWorldInfoContent();
+        
+        // 构建变量替换函数
+        const replaceVars = (template) => {
+            return template
+                .replace(/\{\{user\}\}/g, userName)
+                .replace(/\{\{char\}\}/g, charName)
+                .replace(/\{\{description\}\}/g, description)
+                .replace(/\{\{persona\}\}/g, persona)
+                .replace(/\{\{worldInfo\}\}/g, worldInfo)
+                .replace(/\{\{chatHistory\}\}/g, chatHistory);
+        };
+        
+        // 构建消息
+        const messages = [
+            { role: 'user', content: replaceVars(task.promptU1 || '') },
+            { role: 'assistant', content: replaceVars(task.promptA1 || '') },
+            { role: 'user', content: replaceVars(task.promptU2 || '') },
+            { role: 'assistant', content: replaceVars(task.promptA2 || '') }
+        ].filter(m => m.content);
+        
+        // 构建HTML内容
+        const htmlContent = messages.map((msg, idx) => {
+            const roleLabel = msg.role === 'user' ? 'User' : 'Assistant';
+            const roleClass = msg.role === 'user' ? 'user' : 'assistant';
+            return `
+                <div class="jtw-prompt-message jtw-prompt-${roleClass}">
+                    <div class="jtw-prompt-role">${roleLabel} 消息 ${Math.floor(idx / 2) + 1}</div>
+                    <div class="jtw-prompt-content">${escapeHtml(msg.content)}</div>
+                </div>
+            `;
+        }).join('');
+        
+        // 显示模态框
+        $('#jtw-prompt-preview-title').text(`提示词预览: ${task.name}`);
+        $('#jtw-prompt-preview-content').html(htmlContent);
+        $('#jtw-prompt-preview-modal').fadeIn(200);
+        
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 预览提示词失败:`, e);
+        showTaskStatus(`预览失败: ${e.message}`, true);
+    }
+}
+
+/**
  * 运行任务
  */
 async function runTask(index) {
@@ -1226,6 +1299,24 @@ function initTaskEvents() {
     $('#jtw-task-list').on('click', '.jtw-task-delete', function() {
         const index = parseInt($(this).data('index'));
         deleteTask(index);
+    });
+    
+    // 双击任务条目预览提示词
+    $('#jtw-task-list').on('dblclick', '.jtw-task-item', function() {
+        const index = parseInt($(this).data('index'));
+        previewTaskPrompt(index);
+    });
+    
+    // 关闭预览模态框
+    $('#jtw-close-prompt-preview').on('click', function() {
+        $('#jtw-prompt-preview-modal').fadeOut(200);
+    });
+    
+    // 点击模态框背景关闭
+    $('#jtw-prompt-preview-modal').on('click', function(e) {
+        if (e.target === this) {
+            $(this).fadeOut(200);
+        }
     });
     
     // 初始渲染任务列表
@@ -1537,6 +1628,19 @@ function createSettingsUI() {
             
             <!-- 自定义任务页面 -->
             <div class="jtw-tab-content" id="custom-tasks">
+                <!-- 提示词预览模态框 -->
+                <div id="jtw-prompt-preview-modal" class="jtw-modal" style="display: none;">
+                    <div class="jtw-modal-content">
+                        <div class="jtw-modal-header">
+                            <h3 id="jtw-prompt-preview-title">提示词预览</h3>
+                            <button id="jtw-close-prompt-preview" class="jtw-modal-close">✕</button>
+                        </div>
+                        <div id="jtw-prompt-preview-content" class="jtw-modal-body">
+                            <!-- 提示词内容将在这里动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- 任务列表视图 -->
                 <div id="jtw-task-list-view">
                     <div class="jtw-section">
