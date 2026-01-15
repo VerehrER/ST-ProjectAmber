@@ -228,10 +228,78 @@
     text-overflow: ellipsis;
 }
 
+/* 并行任务元信息 */
+.jtw-task-meta {
+    font-size: 11px;
+    opacity: 0.6;
+    color: var(--SmartThemeEmColor);
+}
+
+/* 并行任务样式 */
+.jtw-task-parallel {
+    border-left: 3px solid #2196f3;
+}
+
+.jtw-task-parallel.enabled {
+    border-left-color: #4caf50;
+}
+
+.jtw-task-parallel.disabled {
+    opacity: 0.7;
+}
+
+/* 开关按钮样式 */
+.jtw-task-toggle {
+    position: relative;
+    display: inline-block;
+    width: 40px;
+    height: 20px;
+    margin-right: 4px;
+}
+
+.jtw-task-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.jtw-toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.3s;
+    border-radius: 20px;
+}
+
+.jtw-toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 14px;
+    width: 14px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.jtw-task-toggle input:checked + .jtw-toggle-slider {
+    background-color: #4caf50;
+}
+
+.jtw-task-toggle input:checked + .jtw-toggle-slider:before {
+    transform: translateX(20px);
+}
+
 .jtw-task-actions {
     display: flex;
     gap: 4px;
     flex-shrink: 0;
+    align-items: center;
 }
 
 .jtw-btn-icon {
@@ -384,6 +452,31 @@
 
 .jtw-prompt-assistant .jtw-prompt-role {
     color: #81c784;
+}
+
+.jtw-prompt-system .jtw-prompt-role {
+    color: #ff9800;
+}
+
+/* 并行任务预览信息 */
+.jtw-prompt-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 8px;
+    margin-bottom: 15px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.jtw-prompt-info div {
+    color: var(--SmartThemeBodyColor);
+}
+
+.jtw-prompt-info strong {
+    color: var(--SmartThemeEmColor);
 }
 
 .jtw-prompt-content {
