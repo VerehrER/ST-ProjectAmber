@@ -25,6 +25,7 @@ const defaultSettings = {
     targetWorldbook: "",       // 目标世界书名称（空则使用角色卡绑定的）
     entryPosition: 0,          // 条目插入位置
     entryOrder: 100,           // 条目排序
+    depth: 4,                  // @ Depth 的深度值
     lastExtractedJson: null,   // 上次提取的 JSON
     // 角色列表提取设置
     extractModel: "",          // 自定义模型名称（留空使用当前模型）
@@ -33,6 +34,7 @@ const defaultSettings = {
     historyCount: 50,          // 发送的历史消息数量
     characterListPosition: 0,  // 角色列表条目位置
     characterListOrder: 100,   // 角色列表条目排序
+    characterListDepth: 4,     // 角色列表 @ Depth 的深度值
     characterListName: "出场角色列表",  // 角色列表世界书条目名称
     // 角色提取提示词
     promptU1: "你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。",
@@ -522,13 +524,15 @@ async function saveCharacterListToWorldbook(characters) {
             : `${newContent}\n\n`;
 
         // 设置条目属性
+        const position = settings.characterListPosition ?? 0;
         Object.assign(entry, {
             comment: entryName,
             content: finalContent,
             constant: true,
             selective: true,
             disable: false,
-            position: settings.characterListPosition ?? 0,
+            position: position,
+            depth: position === 4 ? (settings.characterListDepth ?? 4) : undefined,
             order: settings.characterListOrder ?? 100,
         });
 
@@ -737,6 +741,7 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
         delete contentData.aliases;
 
         // 设置条目属性
+        const position = options.position ?? settings.entryPosition ?? 0;
         Object.assign(entry, {
             key: Array.isArray(keys) ? keys : [keys],
             comment: entryName,
@@ -744,7 +749,8 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             constant: options.constant ?? false,
             selective: options.selective ?? true,
             disable: options.disable ?? false,
-            position: options.position ?? settings.entryPosition ?? 0,
+            position: position,
+            depth: position === 4 ? (options.depth ?? settings.depth ?? 4) : undefined,
             order: options.order ?? settings.entryOrder ?? 100,
             preventRecursion: true,
         });
@@ -813,12 +819,16 @@ function createSettingsUI() {
                     <div style="margin-top: 10px;">
                         <label>条目位置</label>
                         <select id="jtw-entry-position" class="jtw-select">
-                            <option value="0">Before Char Defs (0)</option>
-                            <option value="1">After Char Defs (1)</option>
-                            <option value="2">Top of AN (2)</option>
-                            <option value="3">Bottom of AN (3)</option>
-                            <option value="4">@ Depth (4)</option>
+                            <option value="0">角色定义之前</option>
+                            <option value="1">角色定义之后</option>
+                            <option value="2">作者注释之前</option>
+                            <option value="3">作者注释之后</option>
+                            <option value="4">@ Depth</option>
                         </select>
+                    </div>
+                    <div id="jtw-depth-container" style="margin-top: 10px; display: none;">
+                        <label>深度值 (Depth)</label>
+                        <input type="number" id="jtw-depth" class="jtw-input" value="4" min="0" max="999" />
                     </div>
                     <div style="margin-top: 10px;">
                         <label>排序优先级</label>
@@ -898,12 +908,16 @@ function createSettingsUI() {
                     <div style="margin-bottom: 10px;">
                         <label>条目位置</label>
                         <select id="jtw-character-list-position" class="jtw-select">
-                            <option value="0">Before Char Defs (0)</option>
-                            <option value="1">After Char Defs (1)</option>
-                            <option value="2">Top of AN (2)</option>
-                            <option value="3">Bottom of AN (3)</option>
-                            <option value="4">@ Depth (4)</option>
+                            <option value="0">角色定义之前</option>
+                            <option value="1">角色定义之后</option>
+                            <option value="2">作者注释之前</option>
+                            <option value="3">作者注释之后</option>
+                            <option value="4">@ Depth</option>
                         </select>
+                    </div>
+                    <div id="jtw-character-list-depth-container" style="margin-bottom: 10px; display: none;">
+                        <label>深度值 (Depth)</label>
+                        <input type="number" id="jtw-character-list-depth" class="jtw-input" value="4" min="0" max="999" />
                     </div>
                     <div style="margin-bottom: 10px;">
                         <label>排序优先级</label>
@@ -953,6 +967,22 @@ function createSettingsUI() {
 
     $('#jtw-entry-position').val(settings.entryPosition).on('change', function() {
         settings.entryPosition = parseInt($(this).val());
+        // 显示/隐藏深度输入框
+        if (settings.entryPosition === 4) {
+            $('#jtw-depth-container').show();
+        } else {
+            $('#jtw-depth-container').hide();
+        }
+        saveSettings();
+    });
+    
+    // 初始化深度输入框显示状态
+    if (settings.entryPosition === 4) {
+        $('#jtw-depth-container').show();
+    }
+    
+    $('#jtw-depth').val(settings.depth || 4).on('change', function() {
+        settings.depth = parseInt($(this).val()) || 4;
         saveSettings();
     });
 
@@ -1047,6 +1077,22 @@ function createSettingsUI() {
     
     $('#jtw-character-list-position').val(settings.characterListPosition || 0).on('change', function() {
         settings.characterListPosition = parseInt($(this).val());
+        // 显示/隐藏深度输入框
+        if (settings.characterListPosition === 4) {
+            $('#jtw-character-list-depth-container').show();
+        } else {
+            $('#jtw-character-list-depth-container').hide();
+        }
+        saveSettings();
+    });
+    
+    // 初始化深度输入框显示状态
+    if (settings.characterListPosition === 4) {
+        $('#jtw-character-list-depth-container').show();
+    }
+    
+    $('#jtw-character-list-depth').val(settings.characterListDepth || 4).on('change', function() {
+        settings.characterListDepth = parseInt($(this).val()) || 4;
         saveSettings();
     });
     
