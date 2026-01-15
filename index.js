@@ -240,7 +240,8 @@ function removeTaggedContent(text, tagsString) {
     
     // 思维链相关的标签（需要处理孤立闭合标签）
     const settings = getSettings();
-    const thoughtTags = settings.thoughtTags.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
+    const thoughtTagsStr = settings.thoughtTags || 'think,thinking,thought';
+    const thoughtTags = thoughtTagsStr.split(',').map(t => t.trim().toLowerCase()).filter(t => t);
     
     for (const tag of tags) {
         // 1. 先匹配完整的 <tag>...</tag> 格式，包括多行内容
