@@ -225,7 +225,7 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
         // 检查是否存在同名条目
         let entry = null;
         let isUpdate = false;
-        if (worldData.entries) {
+        if (Array.isArray(worldData.entries)) {
             const existingEntry = worldData.entries.find(e => e && e.comment === entryName);
             if (existingEntry) {
                 entry = existingEntry;
