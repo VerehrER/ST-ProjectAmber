@@ -241,6 +241,7 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             disable: options.disable ?? false,
             position: options.position ?? settings.entryPosition ?? 0,
             order: options.order ?? settings.entryOrder ?? 100,
+            preventRecursion: true,
         });
 
         // 保存世界书
