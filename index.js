@@ -620,7 +620,7 @@ async function extractCharacterList() {
         // 获取基本信息
         const char = ctx.characters?.[ctx.characterId];
         const description = char?.description || char?.data?.description || '';
-        const persona = power_user?.persona_description || '';
+        const persona = ctx.persona || '{{persona}}';
         const userName = ctx.name1 || '{{user}}';
         const charName = char?.name || ctx.name2 || '{{char}}';
         
@@ -1002,7 +1002,7 @@ async function previewTaskPrompt(index) {
         const ctx = getContext();
         const char = ctx.characters?.[ctx.characterId];
         const description = char?.description || char?.data?.description || '';
-        const persona = power_user?.persona_description || '';
+        const persona = ctx.persona || '{{persona}}';
         const userName = ctx.name1 || '{{user}}';
         const charName = char?.name || ctx.name2 || '{{char}}';
         
@@ -1085,7 +1085,7 @@ async function runTask(index) {
         const ctx = getContext();
         const char = ctx.characters?.[ctx.characterId];
         const description = char?.description || char?.data?.description || '';
-        const persona = power_user?.persona_description || '';
+        const persona = ctx.persona || '{{persona}}';
         const userName = ctx.name1 || '{{user}}';
         const charName = char?.name || ctx.name2 || '{{char}}';
         
