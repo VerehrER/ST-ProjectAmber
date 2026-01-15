@@ -226,25 +226,14 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
         let entry = null;
         let isUpdate = false;
         
-        console.log(`[${EXT_NAME}] 查找条目: ${entryName}`);
-        console.log(`[${EXT_NAME}] worldData.entries 类型:`, typeof worldData.entries, Array.isArray(worldData.entries));
-        
-        if (Array.isArray(worldData.entries)) {
-            console.log(`[${EXT_NAME}] 总条目数: ${worldData.entries.length}`);
-            const existingEntry = worldData.entries.find(e => {
-                if (!e) return false;
-                console.log(`[${EXT_NAME}] 检查条目 - comment: "${e.comment}", uid: ${e.uid}`);
-                return e.comment === entryName;
-            });
+        if (worldData.entries && typeof worldData.entries === 'object') {
+            const entriesArray = Object.values(worldData.entries);
+            const existingEntry = entriesArray.find(e => e && e.comment === entryName);
             if (existingEntry) {
                 entry = existingEntry;
                 isUpdate = true;
                 console.log(`[${EXT_NAME}] 找到同名条目，将进行更新: ${entryName} (UID: ${entry.uid})`);
-            } else {
-                console.log(`[${EXT_NAME}] 未找到同名条目，将创建新条目`);
             }
-        } else {
-            console.log(`[${EXT_NAME}] entries 不是数组:`, worldData.entries);
         }
 
         // 如果不存在，创建新条目
