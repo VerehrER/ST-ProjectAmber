@@ -24,6 +24,10 @@
     opacity: 0.6;
 }
 
+.jtw-tab[data-tab="common-settings"] {
+    margin-left: auto;
+}
+
 .jtw-tab:hover {
     opacity: 0.8;
     background: var(--SmartThemeBlurTintColor);
