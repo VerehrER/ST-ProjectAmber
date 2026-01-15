@@ -226,25 +226,36 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
         let entry = null;
         let isUpdate = false;
         
-        console.log(`[${EXT_NAME}] 查找条目: ${entryName}`);
-        console.log(`[${EXT_NAME}] worldData.entries 类型:`, typeof worldData.entries, Array.isArray(worldData.entries));
+        // 输出调试信息
+        console.log(`[${EXT_NAME}] ====== 开始检查同名条目 ======`);
+        console.log(`[${EXT_NAME}] 目标条目名: "${entryName}"`);
+        console.log(`[${EXT_NAME}] worldData:`, worldData);
+        console.log(`[${EXT_NAME}] entries 是否是数组:`, Array.isArray(worldData.entries));
         
-        if (Array.isArray(worldData.entries)) {
-            console.log(`[${EXT_NAME}] 总条目数: ${worldData.entries.length}`);
-            const existingEntry = worldData.entries.find(e => {
-                if (!e) return false;
-                console.log(`[${EXT_NAME}] 检查条目 - comment: "${e.comment}", uid: ${e.uid}`);
-                return e.comment === entryName;
+        if (worldData.entries) {
+            // 尝试获取所有条目
+            const entriesArray = Array.isArray(worldData.entries) 
+                ? worldData.entries 
+                : Object.values(worldData.entries);
+            
+            console.log(`[${EXT_NAME}] 条目总数: ${entriesArray.length}`);
+            console.log(`[${EXT_NAME}] 所有条目的 comment:`, entriesArray.map(e => e?.comment).join(', '));
+            
+            const existingEntry = entriesArray.find(e => {
+                const match = e && e.comment === entryName;
+                if (match) {
+                    console.log(`[${EXT_NAME}] ✓ 找到匹配: "${e.comment}" === "${entryName}"`);
+                }
+                return match;
             });
+            
             if (existingEntry) {
                 entry = existingEntry;
                 isUpdate = true;
-                console.log(`[${EXT_NAME}] 找到同名条目，将进行更新: ${entryName} (UID: ${entry.uid})`);
+                console.log(`[${EXT_NAME}] *** 将更新现有条目 UID: ${entry.uid} ***`);
             } else {
-                console.log(`[${EXT_NAME}] 未找到同名条目，将创建新条目`);
+                console.log(`[${EXT_NAME}] ✗ 未找到同名条目，将创建新条目`);
             }
-        } else {
-            console.log(`[${EXT_NAME}] entries 不是数组:`, worldData.entries);
         }
 
         // 如果不存在，创建新条目
@@ -254,6 +265,7 @@ async function saveJsonToWorldbook(jsonData, options = {}) {
             if (!entry) {
                 return { success: false, error: "创建世界书条目失败" };
             }
+            console.log(`[${EXT_NAME}] 新创建条目 UID: ${entry.uid}`);
         }
 
         // 设置条目属性
