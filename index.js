@@ -253,11 +253,6 @@ function removeTaggedContent(text, tagsString) {
     const thoughtTags = thoughtTagsStr.split(',').map(t => t.trim()).filter(t => t);
     
     for (const tag of thoughtTags) {
-        // 先删除完整配对的思维链标签
-        const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
-        result = result.replace(pairRegex, '');
-        
-        // 然后处理孤立闭合标签
         if (settings.aggressiveThoughtRemoval) {
             // 激进模式：找到最后一个闭合标签，删除它之前的所有内容
             const lastCloseRegex = new RegExp(`^[\\s\\S]*<\\/${tag}>`, 'i');
@@ -265,7 +260,11 @@ function removeTaggedContent(text, tagsString) {
                 result = result.replace(lastCloseRegex, '');
             }
         } else {
-            // 标准模式：只有当存在孤立闭合标签时才删除
+            // 标准模式：先删除完整配对的思维链标签
+            const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+            result = result.replace(pairRegex, '');
+            
+            // 然后处理孤立闭合标签
             const closeTagRegex = new RegExp(`<\\/${tag}>`, 'i');
             const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'i');
             
