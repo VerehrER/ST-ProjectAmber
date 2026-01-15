@@ -211,10 +211,26 @@ function removeTaggedContent(text, tagsString) {
     const tags = tagsString.split(',').map(t => t.trim()).filter(t => t);
     let result = text;
     
+    // 思维链相关的标签（需要处理孤立闭合标签）
+    const thoughtTags = ['think', 'thinking', 'thought'];
+    
     for (const tag of tags) {
-        // 匹配 <tag>...</tag> 格式，包括多行内容
-        const regex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
-        result = result.replace(regex, '');
+        // 1. 先匹配完整的 <tag>...</tag> 格式，包括多行内容
+        const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
+        result = result.replace(pairRegex, '');
+        
+        // 2. 仅对思维链标签：检查是否存在孤立的闭合标签 </tag>（前面没有对应的 <tag>）
+        if (thoughtTags.includes(tag.toLowerCase())) {
+            const closeTagRegex = new RegExp(`<\\/${tag}>`, 'i');
+            const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'i');
+            
+            // 如果存在闭合标签但不存在开启标签，说明是跨消息的思维链
+            if (closeTagRegex.test(result) && !openTagRegex.test(result)) {
+                // 删除从开头到闭合标签（包括闭合标签）的所有内容
+                const deleteRegex = new RegExp(`^[\\s\\S]*?<\\/${tag}>`, 'i');
+                result = result.replace(deleteRegex, '');
+            }
+        }
     }
     
     return result.trim();
