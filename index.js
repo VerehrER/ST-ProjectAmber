@@ -30,6 +30,8 @@ const defaultSettings = {
     extractModel: "",          // 自定义模型名称（留空使用当前模型）
     excludeTags: "think,thinking,summary,safety,example,examples,ooc",  // 要排除的标签列表
     historyCount: 50,          // 发送的历史消息数量
+    characterListPosition: 0,  // 角色列表条目位置
+    characterListOrder: 100,   // 角色列表条目排序
 };
 
 // ==================== JSON 解析工具 ==================== 
@@ -163,6 +165,7 @@ const DEFAULT_PROMPTS = {
 **1. 世界观：**
 <world_info>
 {{description}}
+{{worldInfo}}
 玩家角色：{{user}}
 {{persona}}
 </world_info>
@@ -182,7 +185,16 @@ const DEFAULT_PROMPTS = {
 4. 文本内容中如需使用引号，请使用单引号或中文引号「」或""，不要使用半角双引号 "
 5. 如果没有新角色返回 []
 
-模板：[{ "name": "角色名", "location": "当前/最后出现的地点", "info": "一句话简介，包括外貌特征和身份" }]`,
+模板：[{
+  "name": "角色名",
+  "location": "当前/最后出现的地点",
+  "intro": "外貌特征与身份的详细描述",
+  "background": "角色生平与背景。解释由于什么过去导致了现在的性格，以及他为什么会出现在当前场景中。",
+  "persona": {
+    "keywords": ["性格关键词1", "性格关键词2", "性格关键词3"],
+    "speaking_style": "说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）。对待主角的态度（尊敬、蔑视、恐惧等）。"
+  }
+}]`,
         a2: `了解，开始生成JSON:`
     }
 };
@@ -206,6 +218,40 @@ function removeTaggedContent(text, tagsString) {
     }
     
     return result.trim();
+}
+
+/**
+ * 获取角色卡的世界书内容
+ * @returns {Promise<string>}
+ */
+async function getWorldInfoContent() {
+    try {
+        const targetBook = getCharacterWorldbook();
+        if (!targetBook) return '';
+        
+        const worldData = await loadWorldInfo(targetBook);
+        if (!worldData?.entries) return '';
+        
+        // 获取所有启用的条目
+        const entriesArray = Object.values(worldData.entries);
+        const activeEntries = entriesArray.filter(e => 
+            e && !e.disable && e.content
+        );
+        
+        if (activeEntries.length === 0) return '';
+        
+        // 格式化为文本
+        const lines = activeEntries.map(e => {
+            const keys = Array.isArray(e.key) ? e.key.join(', ') : e.key;
+            const title = e.comment || keys || '未命名条目';
+            return `[${title}]\n${e.content}`;
+        });
+        
+        return '\n\n' + lines.join('\n\n');
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 获取世界书内容失败:`, e);
+        return '';
+    }
 }
 
 /**
@@ -246,6 +292,7 @@ function buildExtractCharactersMessages(vars) {
             .replace(/\{\{char\}\}/g, vars.charName || '{{char}}')
             .replace(/\{\{description\}\}/g, vars.description || '')
             .replace(/\{\{persona\}\}/g, vars.persona || '')
+            .replace(/\{\{worldInfo\}\}/g, vars.worldInfo || '')
             .replace(/\{\{chatHistory\}\}/g, vars.chatHistory || '')
             .replace(/\{\{existingCharacters\}\}/g, vars.existingCharacters || '');
     };
@@ -452,7 +499,23 @@ async function saveCharacterListToWorldbook(characters) {
 
         // 格式化新角色内容
         const newContent = characters.map(char => {
-            return `- ${char.name}:\n  location: ${char.location || '未知'}\n  info: ${char.info || '无描述'}`;
+            let content = `- ${char.name}:\n`;
+            content += `  location: ${char.location || '未知'}\n`;
+            if (char.intro) {
+                content += `  intro: ${char.intro}\n`;
+            }
+            if (char.background) {
+                content += `  background: ${char.background}\n`;
+            }
+            if (char.persona) {
+                if (char.persona.keywords && Array.isArray(char.persona.keywords)) {
+                    content += `  keywords: ${char.persona.keywords.join(', ')}\n`;
+                }
+                if (char.persona.speaking_style) {
+                    content += `  speaking_style: ${char.persona.speaking_style}`;
+                }
+            }
+            return content;
         }).join('\n\n');
 
         // 合并内容（追加到底部）
@@ -460,27 +523,15 @@ async function saveCharacterListToWorldbook(characters) {
             ? `${existingContent.trim()}\n\n${newContent}`
             : newContent;
 
-        // 收集所有角色名作为关键词
-        const allNames = [];
-        const lines = finalContent.split('\n');
-        for (const line of lines) {
-            const match = line.match(/^-\s*([^:]+):/);
-            if (match) {
-                allNames.push(match[1].trim());
-            }
-        }
-
         // 设置条目属性
         Object.assign(entry, {
-            key: allNames.length > 0 ? allNames : [entryName],
             comment: entryName,
             content: finalContent,
-            constant: false,
+            constant: true,
             selective: true,
             disable: false,
-            position: settings.entryPosition ?? 0,
-            order: settings.entryOrder ?? 100,
-            preventRecursion: true,
+            position: settings.characterListPosition ?? 0,
+            order: settings.characterListOrder ?? 100,
         });
 
         // 保存世界书
@@ -516,6 +567,9 @@ async function extractCharacterList() {
         // 获取聊天历史
         const chatHistory = getChatHistory(settings.historyCount || 50);
         
+        // 获取世界书内容
+        const worldInfo = await getWorldInfoContent();
+        
         // 获取已有角色
         const existingNames = await getExistingCharacters();
         const existingCharacters = existingNames.length > 0 
@@ -528,6 +582,7 @@ async function extractCharacterList() {
             charName,
             description,
             persona,
+            worldInfo,
             chatHistory,
             existingCharacters
         });
@@ -726,69 +781,116 @@ function createSettingsUI() {
             <div class="inline-drawer-icon fa-solid fa-circle-chevron-down down"></div>
         </div>
         <div class="inline-drawer-content" id="json-to-worldbook-panel">
-            <div class="jtw-section">
-                <h4>基本设置</h4>
-                <div class="jtw-checkbox-row">
-                    <input type="checkbox" id="jtw-enabled" />
-                    <label for="jtw-enabled">启用扩展</label>
-                </div>
-                <div class="jtw-checkbox-row">
-                    <input type="checkbox" id="jtw-auto-extract" />
-                    <label for="jtw-auto-extract">自动提取（每条AI消息）</label>
-                </div>
+            <!-- 标签页导航 -->
+            <div class="jtw-tabs">
+                <button class="jtw-tab active" data-tab="json-extract">JSON提取</button>
+                <button class="jtw-tab" data-tab="character-list">角色列表</button>
             </div>
             
-            <div class="jtw-section">
-                <h4>世界书设置</h4>
-                <label>目标世界书（留空使用角色卡绑定的）</label>
-                <select id="jtw-target-worldbook" class="jtw-select">
-                    <option value="">-- 使用角色卡世界书 --</option>
-                </select>
-                <div style="margin-top: 10px;">
-                    <label>条目位置</label>
-                    <select id="jtw-entry-position" class="jtw-select">
-                        <option value="0">Before Char Defs (0)</option>
-                        <option value="1">After Char Defs (1)</option>
-                        <option value="2">Top of AN (2)</option>
-                        <option value="3">Bottom of AN (3)</option>
-                        <option value="4">@ Depth (4)</option>
+            <!-- JSON提取页面 -->
+            <div class="jtw-tab-content active" id="json-extract">
+                <div class="jtw-section">
+                    <h4>基本设置</h4>
+                    <div class="jtw-checkbox-row">
+                        <input type="checkbox" id="jtw-enabled" />
+                        <label for="jtw-enabled">启用扩展</label>
+                    </div>
+                    <div class="jtw-checkbox-row">
+                        <input type="checkbox" id="jtw-auto-extract" />
+                        <label for="jtw-auto-extract">自动提取（每条AI消息）</label>
+                    </div>
+                </div>
+                
+                <div class="jtw-section">
+                    <h4>世界书设置</h4>
+                    <label>目标世界书（留空使用角色卡绑定的）</label>
+                    <select id="jtw-target-worldbook" class="jtw-select">
+                        <option value="">-- 使用角色卡世界书 --</option>
                     </select>
+                    <div style="margin-top: 10px;">
+                        <label>条目位置</label>
+                        <select id="jtw-entry-position" class="jtw-select">
+                            <option value="0">Before Char Defs (0)</option>
+                            <option value="1">After Char Defs (1)</option>
+                            <option value="2">Top of AN (2)</option>
+                            <option value="3">Bottom of AN (3)</option>
+                            <option value="4">@ Depth (4)</option>
+                        </select>
+                    </div>
+                    <div style="margin-top: 10px;">
+                        <label>排序优先级</label>
+                        <input type="number" id="jtw-entry-order" class="jtw-input" value="100" min="0" />
+                    </div>
                 </div>
-                <div style="margin-top: 10px;">
-                    <label>排序优先级</label>
-                    <input type="number" id="jtw-entry-order" class="jtw-input" value="100" min="0" />
+                
+                <div class="jtw-section">
+                    <h4>手动操作</h4>
+                    <button id="jtw-extract-last" class="jtw-btn">从最后一条消息提取</button>
+                    <button id="jtw-save-to-wb" class="jtw-btn primary" disabled>保存到世界书</button>
+                    <div id="jtw-status" class="jtw-status" style="display: none;"></div>
+                    <div id="jtw-json-preview" class="jtw-json-preview" style="display: none;"></div>
                 </div>
             </div>
             
-            <div class="jtw-section">
-                <h4>手动操作</h4>
-                <button id="jtw-extract-last" class="jtw-btn">从最后一条消息提取</button>
-                <button id="jtw-save-to-wb" class="jtw-btn primary" disabled>保存到世界书</button>
-                <div id="jtw-status" class="jtw-status" style="display: none;"></div>
-                <div id="jtw-json-preview" class="jtw-json-preview" style="display: none;"></div>
-            </div>
-            
-            <div class="jtw-section">
-                <h4>角色列表提取</h4>
-                <div style="margin-bottom: 10px;">
-                    <label>使用模型（留空使用当前模型）</label>
-                    <input type="text" id="jtw-extract-model" class="jtw-input" placeholder="留空使用当前模型" />
+            <!-- 角色列表页面 -->
+            <div class="jtw-tab-content" id="character-list">
+                <div class="jtw-section">
+                    <h4>模型设置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label>使用模型（留空使用当前模型）</label>
+                        <input type="text" id="jtw-extract-model" class="jtw-input" placeholder="留空使用当前模型" />
+                    </div>
                 </div>
-                <div style="margin-bottom: 10px;">
-                    <label>历史消息数量</label>
-                    <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
+                
+                <div class="jtw-section">
+                    <h4>提取设置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label>历史消息数量</label>
+                        <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>排除的标签（逗号分隔）</label>
+                        <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
+                        <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
+                    </div>
                 </div>
-                <div style="margin-bottom: 10px;">
-                    <label>排除的标签（逗号分隔）</label>
-                    <input type="text" id="jtw-exclude-tags" class="jtw-input" placeholder="think,summary,safety" />
-                    <div class="jtw-hint">这些标签内的文本会在发送前被移除</div>
+                
+                <div class="jtw-section">
+                    <h4>世界书设置</h4>
+                    <div style="margin-bottom: 10px;">
+                        <label>条目位置</label>
+                        <select id="jtw-character-list-position" class="jtw-select">
+                            <option value="0">Before Char Defs (0)</option>
+                            <option value="1">After Char Defs (1)</option>
+                            <option value="2">Top of AN (2)</option>
+                            <option value="3">Bottom of AN (3)</option>
+                            <option value="4">@ Depth (4)</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label>排序优先级</label>
+                        <input type="number" id="jtw-character-list-order" class="jtw-input" value="100" min="0" />
+                    </div>
                 </div>
-                <button id="jtw-extract-characters" class="jtw-btn primary">提取出场角色列表</button>
+                
+                <div class="jtw-section">
+                    <h4>执行操作</h4>
+                    <button id="jtw-extract-characters" class="jtw-btn primary">提取出场角色列表</button>
+                </div>
             </div>
         </div>
     </div>`;
 
     $('#extensions_settings2').append(settingsHtml);
+
+    // 标签页切换
+    $('.jtw-tab').on('click', function() {
+        const tab = $(this).data('tab');
+        $('.jtw-tab').removeClass('active');
+        $('.jtw-tab-content').removeClass('active');
+        $(this).addClass('active');
+        $(`#${tab}`).addClass('active');
+    });
 
     // 绑定事件
     const settings = getSettings();
@@ -840,6 +942,16 @@ function createSettingsUI() {
     
     $('#jtw-exclude-tags').val(settings.excludeTags || '').on('change', function() {
         settings.excludeTags = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-character-list-position').val(settings.characterListPosition || 0).on('change', function() {
+        settings.characterListPosition = parseInt($(this).val());
+        saveSettings();
+    });
+    
+    $('#jtw-character-list-order').val(settings.characterListOrder || 100).on('change', function() {
+        settings.characterListOrder = parseInt($(this).val()) || 100;
         saveSettings();
     });
     
