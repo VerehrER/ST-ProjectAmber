@@ -35,6 +35,7 @@ const defaultSettings = {
     applyExcludeAfterInclude: false,  // 提取包括标签后是否再执行排除处理
     excludeTags: "summary,safety",  // 要排除的标签列表
     thoughtTags: "think,thinking,thought",  // 思维链标签（会处理孤立闭合标签）
+    aggressiveThoughtRemoval: false,  // 激进删除思维链：直接删除最后一个闭合标签前的所有内容
     historyCount: 50,          // 发送的历史消息数量
     characterListPosition: 0,  // 角色列表条目位置
     characterListOrder: 100,   // 角色列表条目排序
@@ -248,16 +249,25 @@ function removeTaggedContent(text, tagsString) {
         const pairRegex = new RegExp(`<${tag}[^>]*>[\\s\\S]*?<\\/${tag}>`, 'gi');
         result = result.replace(pairRegex, '');
         
-        // 2. 仅对思维链标签：检查是否存在孤立的闭合标签 </tag>（前面没有对应的 <tag>）
+        // 2. 仅对思维链标签：处理孤立的闭合标签
         if (thoughtTags.includes(tag.toLowerCase())) {
-            const closeTagRegex = new RegExp(`<\\/${tag}>`, 'i');
-            const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'i');
-            
-            // 如果存在闭合标签但不存在开启标签，说明是跨消息的思维链
-            if (closeTagRegex.test(result) && !openTagRegex.test(result)) {
-                // 删除从开头到闭合标签（包括闭合标签）的所有内容
-                const deleteRegex = new RegExp(`^[\\s\\S]*?<\\/${tag}>`, 'i');
-                result = result.replace(deleteRegex, '');
+            if (settings.aggressiveThoughtRemoval) {
+                // 激进模式：找到最后一个闭合标签，删除它之前的所有内容
+                const lastCloseRegex = new RegExp(`^[\\s\\S]*<\\/${tag}>`, 'i');
+                if (lastCloseRegex.test(result)) {
+                    result = result.replace(lastCloseRegex, '');
+                }
+            } else {
+                // 标准模式：只有当存在孤立闭合标签时才删除
+                const closeTagRegex = new RegExp(`<\\/${tag}>`, 'i');
+                const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'i');
+                
+                // 如果存在闭合标签但不存在开启标签，说明是跨消息的思维链
+                if (closeTagRegex.test(result) && !openTagRegex.test(result)) {
+                    // 删除从开头到闭合标签（包括闭合标签）的所有内容
+                    const deleteRegex = new RegExp(`^[\\s\\S]*?<\\/${tag}>`, 'i');
+                    result = result.replace(deleteRegex, '');
+                }
             }
         }
     }
@@ -1676,6 +1686,11 @@ function createSettingsUI() {
                         <input type="text" id="jtw-thought-tags" class="jtw-input" placeholder="think,thinking,thought" />
                         <div class="jtw-hint">思维链标签会特殊处理：如果只存在闭合标签（如&lt;/think&gt;），会删除从开头到闭合标签的所有内容</div>
                     </div>
+                    <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                        <input type="checkbox" id="jtw-aggressive-thought-removal" />
+                        <label for="jtw-aggressive-thought-removal">激进删除思维链</label>
+                        <div class="jtw-hint" style="margin-left: 24px;">勾选后，直接删除最后一个思维链闭合标签之前的所有内容，不检查是否有对应的开启标签</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1773,6 +1788,11 @@ function createSettingsUI() {
     
     $('#jtw-thought-tags').val(settings.thoughtTags || 'think,thinking,thought').on('change', function() {
         settings.thoughtTags = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-aggressive-thought-removal').prop('checked', settings.aggressiveThoughtRemoval || false).on('change', function() {
+        settings.aggressiveThoughtRemoval = $(this).prop('checked');
         saveSettings();
     });
     
