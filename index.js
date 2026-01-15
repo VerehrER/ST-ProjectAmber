@@ -899,21 +899,24 @@ function createSettingsUI() {
                 
                 <div class="jtw-section">
                     <h4>提示词设置</h4>
-                    <div style="margin-bottom: 10px;">
-                        <label>User 消息 1</label>
-                        <textarea id="jtw-prompt-u1" class="jtw-input" rows="2"></textarea>
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label>Assistant 消息 1</label>
-                        <textarea id="jtw-prompt-a1" class="jtw-input" rows="2"></textarea>
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label>User 消息 2</label>
-                        <textarea id="jtw-prompt-u2" class="jtw-input" rows="8"></textarea>
-                    </div>
-                    <div style="margin-bottom: 10px;">
-                        <label>Assistant 消息 2</label>
-                        <textarea id="jtw-prompt-a2" class="jtw-input" rows="1"></textarea>
+                    <button id="jtw-toggle-prompts" class="jtw-btn" style="margin-bottom: 10px;">展开自定义提示词</button>
+                    <div id="jtw-prompts-container" style="display: none;">
+                        <div style="margin-bottom: 10px;">
+                            <label>User 消息 1</label>
+                            <textarea id="jtw-prompt-u1" class="jtw-input" rows="2"></textarea>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>Assistant 消息 1</label>
+                            <textarea id="jtw-prompt-a1" class="jtw-input" rows="2"></textarea>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>User 消息 2</label>
+                            <textarea id="jtw-prompt-u2" class="jtw-input" rows="8"></textarea>
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>Assistant 消息 2</label>
+                            <textarea id="jtw-prompt-a2" class="jtw-input" rows="1"></textarea>
+                        </div>
                     </div>
                 </div>
                 
@@ -1017,24 +1020,43 @@ function createSettingsUI() {
         saveSettings();
     });
     
-    $('#jtw-prompt-u1').val(settings.promptU1 || '').on('change', function() {
+    // 提示词设置（设置初始值）
+    const defaultU1 = "你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。";
+    const defaultA1 = "明白。请提供【世界观】和【剧情经历】，我将提取角色并以JSON数组输出。";
+    const defaultU2 = "### 上下文\n\n**1. 世界观：**\n<world_info>\n{{description}}\n{{worldInfo}}\n玩家角色：{{user}}\n{{persona}}\n</world_info>\n\n**2. {{user}}经历：**\n<chat_history>\n{{chatHistory}}\n</chat_history>\n\n{{existingCharacters}}\n\n### 输出要求\n\n1. 返回一个合法 JSON 数组，使用标准 JSON 语法（键名和字符串都用半角双引号 \")\n2. 只提取有具体称呼的新角色（不包括{{user}}自己）\n3. 每个角色都需要 name / intro / background / persona\n4. 文本内容中如需使用引号，请使用单引号或中文引号「」或\"\"，不要使用半角双引号 \"\n5. 如果没有新角色返回 []\n\n模板: [{\n  \"name\": \"角色名\",\n  \"intro\": \"外貌特征与身份的详细描述\",\n  \"background\": \"角色生平与背景。解释由于什么过去导致了现在的性格，以及他为什么会出现在当前场景中。\",\n  \"persona\": {\n    \"keywords\": [\"性格关键词1\", \"性格关键词2\", \"性格关键词3\"],\n    \"speaking_style\": \"说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）等。对待主角的态度（尊敬、喜爱、蔑视、恐惧等）。\"\n  }\n}]";
+    const defaultA2 = "了解，开始生成JSON:";
+    
+    $('#jtw-prompt-u1').val(settings.promptU1 || defaultU1).on('change', function() {
         settings.promptU1 = $(this).val();
         saveSettings();
     });
     
-    $('#jtw-prompt-a1').val(settings.promptA1 || '').on('change', function() {
+    $('#jtw-prompt-a1').val(settings.promptA1 || defaultA1).on('change', function() {
         settings.promptA1 = $(this).val();
         saveSettings();
     });
     
-    $('#jtw-prompt-u2').val(settings.promptU2 || '').on('change', function() {
+    $('#jtw-prompt-u2').val(settings.promptU2 || defaultU2).on('change', function() {
         settings.promptU2 = $(this).val();
         saveSettings();
     });
     
-    $('#jtw-prompt-a2').val(settings.promptA2 || '').on('change', function() {
+    $('#jtw-prompt-a2').val(settings.promptA2 || defaultA2).on('change', function() {
         settings.promptA2 = $(this).val();
         saveSettings();
+    });
+    
+    // 提示词折叠按钮
+    $('#jtw-toggle-prompts').on('click', function() {
+        const $container = $('#jtw-prompts-container');
+        const $button = $(this);
+        if ($container.is(':visible')) {
+            $container.slideUp();
+            $button.text('展开自定义提示词');
+        } else {
+            $container.slideDown();
+            $button.text('收起自定义提示词');
+        }
     });
     
     $('#jtw-character-list-position').val(settings.characterListPosition || 0).on('change', function() {
