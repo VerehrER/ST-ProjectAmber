@@ -787,6 +787,7 @@ function createSettingsUI() {
         updateWorldbookSelect,
         getCharacterWorldbook,
         getAvailableWorldbooks,
+        jsonToYaml,
         EXT_NAME
     });
     
