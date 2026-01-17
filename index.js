@@ -1247,7 +1247,7 @@ function bindQuickAccessEvents() {
         // limit bounds relative to current scroll view
         let newTop = startTop + deltaY;
         const minTop = scrollTop + 10;
-        const maxTop = scrollTop + container.height - panelHeight - 10;
+        const maxTop = scrollTop + container.height - panelHeight - 50;
         
         newTop = Math.max(minTop, Math.min(newTop, maxTop));
         
