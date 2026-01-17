@@ -839,8 +839,10 @@ async function saveExtractionResult() {
         for (const char of updateCharacters) {
             const targetName = char.update_for;
             const updateData = { ...char };
-            // 保留 name 字段为更新目标名称
-            updateData.name = targetName;
+            // 如果 AI 没有提供新的 name，则使用 update_for 的值
+            if (!updateData.name) {
+                updateData.name = targetName;
+            }
             
             const result = await updateCharacterInEntry(targetName, updateData);
             
