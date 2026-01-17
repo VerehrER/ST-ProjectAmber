@@ -1181,32 +1181,32 @@ function bindQuickAccessEvents() {
     let startTop = 0;
     let dragStartTime = 0;
     
-    // 获取容器
-    const getContainer = () => {
-        const $container = $panel.parent();
+    // 获取可视区域的边界（使用窗口高度而不是容器高度）
+    const getVisibleBounds = () => {
+        const $parent = $panel.parent();
+        const parentOffset = $parent.offset();
+        const parentScrollTop = $parent.scrollTop() || 0;
+        const windowHeight = $(window).height();
+        
+        // 计算父容器在屏幕中的可见部分
+        const parentTop = parentOffset ? parentOffset.top : 0;
+        const visibleTop = Math.max(0, -parentTop + parentScrollTop);
+        const visibleBottom = Math.min($parent.height(), windowHeight - parentTop + parentScrollTop);
+        
         return {
-            height: $container.height(),
-            width: $container.width()
+            minTop: visibleTop + 10,
+            maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
         };
     };
 
-    // 限制位置在容器范围内
+    // 限制位置在可视范围内
     const clampPosition = () => {
-        const container = getContainer();
-        const panelHeight = $panel.outerHeight() || 40;
-        const $parent = $panel.parent();
-        const scrollTop = $parent.scrollTop() || 0;
-        
-        // 获取当前 top 值 (如果是 auto，则使用 offsetTop)
+        const bounds = getVisibleBounds();
         let currentTop = $panel[0].offsetTop;
         
-        // 限制范围: 顶部留 10px，底部留 10px
-        const minTop = scrollTop + 10;
-        const maxTop = scrollTop + container.height - panelHeight - 10;
-        
         let newTop = currentTop;
-        if (newTop < minTop) newTop = minTop;
-        if (newTop > maxTop) newTop = maxTop;
+        if (newTop < bounds.minTop) newTop = bounds.minTop;
+        if (newTop > bounds.maxTop) newTop = bounds.maxTop;
         
         if (newTop !== currentTop) {
             $panel.css({
@@ -1274,22 +1274,17 @@ function bindQuickAccessEvents() {
             hasMoved = true;
         }
         
-        const container = getContainer();
-        const panelHeight = $panel.outerHeight();
-        const $parent = $panel.parent();
-        const scrollTop = $parent.scrollTop() || 0;
+        // 使用新的边界计算方法
+        const bounds = getVisibleBounds();
         
-        // 计算新位置，限制在容器可视范围内
-        // limit bounds relative to current scroll view
+        // 计算新位置，限制在可视范围内
         let newTop = startTop + deltaY;
-        const minTop = scrollTop + 10;
-        const maxTop = scrollTop + container.height - panelHeight - 10;
-        
-        newTop = Math.max(minTop, Math.min(newTop, maxTop));
+        newTop = Math.max(bounds.minTop, Math.min(newTop, bounds.maxTop));
         
         // 检测左右侧
-        const containerRect = $panel.parent()[0].getBoundingClientRect();
-        const isOnLeft = clientX < containerRect.left + container.width / 2;
+        const $parent = $panel.parent();
+        const parentRect = $parent[0].getBoundingClientRect();
+        const isOnLeft = clientX < parentRect.left + parentRect.width / 2;
         
         $panel.css({
             top: newTop + 'px',
