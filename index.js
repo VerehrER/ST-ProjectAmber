@@ -687,6 +687,7 @@ function createSettingsUI() {
                 
                 <div class="jtw-section">
                     <h4>世界书设置</h4>
+                    <div class="jtw-hint" style="margin-bottom: 10px;">💡 若JSON中已包含世界书属性（如keys、position、depth等），将优先使用JSON中的设置</div>
                     <label>目标世界书（留空使用角色卡绑定的）</label>
                     <select id="jtw-target-worldbook" class="jtw-select">
                         <option value="">-- 使用角色卡世界书 --</option>
