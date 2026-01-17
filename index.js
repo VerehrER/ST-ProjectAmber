@@ -1195,20 +1195,25 @@ function bindQuickAccessEvents() {
         const container = getContainer();
         const panelHeight = $panel.outerHeight() || 40;
         const $parent = $panel.parent();
+        const containerRect = $parent[0].getBoundingClientRect();
         const scrollTop = $parent.scrollTop() || 0;
+        const clientTop = $parent[0].clientTop || 0;
         
         // 获取当前 top 值 (如果是 auto，则使用 offsetTop)
         let currentTop = $panel[0].offsetTop;
         
-        // 限制范围: 顶部留 10px，底部留 10px
-        const minTop = scrollTop + 10;
-        const maxTop = scrollTop + container.height - panelHeight - 10;
+        // 限制范围: 视口顶部留 10px，视口底部留 10px
+        // 计算公式: offsetTop = viewportY - containerRect.top - clientTop + scrollTop
+        // 这样可以确保图标始终在视口内，无论容器有多高
+        const minTop = 10 - containerRect.top - clientTop + scrollTop;
+        const maxTop = (window.innerHeight - 10 - panelHeight) - containerRect.top - clientTop + scrollTop;
         
         let newTop = currentTop;
-        if (newTop < minTop) newTop = minTop;
-        if (newTop > maxTop) newTop = maxTop;
+        // 修正位置
+        newTop = Math.min(newTop, maxTop);
+        newTop = Math.max(minTop, newTop);
         
-        if (newTop !== currentTop) {
+        if (Math.abs(newTop - currentTop) > 1) {
             $panel.css({
                 top: newTop + 'px',
                 bottom: 'auto'
@@ -1277,18 +1282,19 @@ function bindQuickAccessEvents() {
         const container = getContainer();
         const panelHeight = $panel.outerHeight();
         const $parent = $panel.parent();
+        const containerRect = $parent[0].getBoundingClientRect();
         const scrollTop = $parent.scrollTop() || 0;
+        const clientTop = $parent[0].clientTop || 0;
         
         // 计算新位置，限制在容器可视范围内
-        // limit bounds relative to current scroll view
-        let newTop = startTop + deltaY;
-        const minTop = scrollTop + 10;
-        const maxTop = scrollTop + container.height - panelHeight - 10;
+        // limit bounds relative to window viewport
+        const minTop = 10 - containerRect.top - clientTop + scrollTop;
+        const maxTop = (window.innerHeight - 10 - panelHeight) - containerRect.top - clientTop + scrollTop;
         
+        let newTop = startTop + deltaY;
         newTop = Math.max(minTop, Math.min(newTop, maxTop));
         
         // 检测左右侧
-        const containerRect = $panel.parent()[0].getBoundingClientRect();
         const isOnLeft = clientX < containerRect.left + container.width / 2;
         
         $panel.css({
