@@ -1405,34 +1405,31 @@ function handleQuickAccessAction(action) {
  * 打开扩展设置面板并切换到指定标签
  */
 function openExtensionPanel(tabId) {
-    // 打开扩展面板（如果未打开）
+    // 1. 先打开顶部的扩展设置面板
     const $extensionsButton = $('#extensionsMenuButton');
-    const $extensionsPanel = $('#extensionsMenu');
+    const $extensionsPanel = $('#extensions_settings2').parent();
     
-    // 尝试打开扩展面板
+    // 如果扩展面板未显示，点击按钮打开
     if (!$extensionsPanel.is(':visible')) {
         $extensionsButton.trigger('click');
     }
     
-    // 延迟后切换到指定标签
+    // 2. 延迟后展开 Project Amber 的 inline-drawer
     setTimeout(() => {
-        // 找到 Project Amber 的设置面板
         const $amberPanel = $('#json-to-worldbook-panel');
         const $drawer = $amberPanel.closest('.inline-drawer');
         
-        // 如果抽屉未展开，展开它
         if ($drawer.length) {
-            const $drawerContent = $drawer.find('.inline-drawer-content');
             const $drawerIcon = $drawer.find('.inline-drawer-icon');
             
-            // 检查是否已展开（通过检查icon是否有down class）
+            // 检查是否已展开（down class表示未展开，up表示已展开）
             if ($drawerIcon.hasClass('down')) {
                 // 未展开，点击展开
                 $drawer.find('.inline-drawer-toggle').trigger('click');
             }
         }
         
-        // 切换到指定标签页
+        // 3. 切换到指定标签页
         setTimeout(() => {
             $(`.jtw-tab[data-tab="${tabId}"]`).trigger('click');
         }, 150);
