@@ -69,7 +69,8 @@ export function createDefaultTask() {
         promptA1: '',
         promptU2: '',
         promptA2: '',
-        historyCount: null,   // 自定义历史消息数量，null 表示使用全局设置
+        historyStartLayer: null,  // 历史消息开始层数，null 表示使用全局设置
+        historyEndLayer: null,    // 历史消息结束层数，null 表示使用全局设置
         createdAt: Date.now(),
         updatedAt: Date.now()
     };
@@ -204,7 +205,8 @@ function showTaskEditView(task, isNew = true) {
     $('#jtw-task-prompt-a1').val(task.promptA1 || '');
     $('#jtw-task-prompt-u2').val(task.promptU2 || '');
     $('#jtw-task-prompt-a2').val(task.promptA2 || '');
-    $('#jtw-task-history-count').val(task.historyCount ?? '');
+    $('#jtw-task-history-start').val(task.historyStartLayer ?? '');
+    $('#jtw-task-history-end').val(task.historyEndLayer ?? '');
 }
 
 /**
@@ -318,14 +320,16 @@ function toggleParallelTask(index, enabled) {
  * 从表单获取任务数据
  */
 function getTaskFromForm() {
-    const historyCountValue = $('#jtw-task-history-count').val().trim();
+    const historyStartValue = $('#jtw-task-history-start').val().trim();
+    const historyEndValue = $('#jtw-task-history-end').val().trim();
     return {
         name: $('#jtw-task-name').val().trim(),
         promptU1: $('#jtw-task-prompt-u1').val(),
         promptA1: $('#jtw-task-prompt-a1').val(),
         promptU2: $('#jtw-task-prompt-u2').val(),
         promptA2: $('#jtw-task-prompt-a2').val(),
-        historyCount: historyCountValue === '' ? null : parseInt(historyCountValue)
+        historyStartLayer: historyStartValue === '' ? null : parseInt(historyStartValue),
+        historyEndLayer: historyEndValue === '' ? null : parseInt(historyEndValue)
     };
 }
 
@@ -618,9 +622,32 @@ async function runTask(index) {
         const userName = ctx.name1 || '{{user}}';
         const charName = char?.name || ctx.name2 || '{{char}}';
         
-        // 获取聊天历史（优先使用任务的自定义设置，否则使用通用设置）
-        const historyCount = task.historyCount ?? settings.historyCount ?? 50;
-        const chatHistory = getChatHistory(historyCount);
+        // 获取聊天历史
+        let chatHistory;
+        if (task.historyStartLayer != null && task.historyStartLayer !== '') {
+            // 使用层数范围获取
+            const chat = ctx.chat || [];
+            const totalMessages = chat.length;
+            let startLayer = parseInt(task.historyStartLayer);
+            let endLayer = parseInt(task.historyEndLayer) || totalMessages;
+            
+            startLayer = Math.max(1, Math.min(startLayer, totalMessages));
+            endLayer = Math.max(startLayer, Math.min(endLayer, totalMessages));
+            
+            const startIndex = startLayer - 1;
+            const endIndex = endLayer;
+            const selectedMessages = chat.slice(startIndex, endIndex);
+            
+            // 格式化消息
+            chatHistory = selectedMessages.map(msg => {
+                const name = msg.is_user ? userName : charName;
+                return `${name}: ${msg.mes}`;
+            }).join('\n\n');
+        } else {
+            // 使用全局设置
+            const historyCount = settings.historyCount ?? 50;
+            chatHistory = getChatHistory(historyCount);
+        }
         
         // 获取世界书内容
         const worldInfo = await getWorldInfoContent();
@@ -988,9 +1015,13 @@ export function renderCustomTasksPanel() {
             <div class="jtw-section">
                 <h4>提示词设置</h4>
                 <div style="margin-bottom: 10px;">
-                    <label>历史消息数量（留空使用通用设置）</label>
-                    <input type="number" id="jtw-task-history-count" class="jtw-input" placeholder="留空使用通用设置" min="0" />
-                    <div class="jtw-hint">控制 {{chatHistory}} 变量包含的消息数量</div>
+                    <label>历史消息层数范围</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="number" id="jtw-task-history-start" class="jtw-input" placeholder="开始" min="1" style="flex: 1;" />
+                        <span>~</span>
+                        <input type="number" id="jtw-task-history-end" class="jtw-input" placeholder="结束" min="1" style="flex: 1;" />
+                    </div>
+                    <div class="jtw-hint">控制 {{chatHistory}} 变量包含的消息范围（留空使用通用设置）</div>
                 </div>
                 <div style="margin-bottom: 10px;">
                     <label>User 消息 1</label>
