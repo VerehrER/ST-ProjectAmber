@@ -1189,6 +1189,32 @@ function bindQuickAccessEvents() {
             width: $container.width()
         };
     };
+
+    // 限制位置在容器范围内
+    const clampPosition = () => {
+        const container = getContainer();
+        const panelHeight = $panel.outerHeight() || 40;
+        const $parent = $panel.parent();
+        const scrollTop = $parent.scrollTop() || 0;
+        
+        // 获取当前 top 值 (如果是 auto，则使用 offsetTop)
+        let currentTop = $panel[0].offsetTop;
+        
+        // 限制范围: 顶部留 10px，底部留 10px
+        const minTop = scrollTop + 10;
+        const maxTop = scrollTop + container.height - panelHeight - 10;
+        
+        let newTop = currentTop;
+        if (newTop < minTop) newTop = minTop;
+        if (newTop > maxTop) newTop = maxTop;
+        
+        if (newTop !== currentTop) {
+            $panel.css({
+                top: newTop + 'px',
+                bottom: 'auto'
+            });
+        }
+    };
     
     // 加载保存的位置
     const settings = getSettings();
@@ -1204,7 +1230,17 @@ function bindQuickAccessEvents() {
         if (pos.side === 'left') {
             $panel.addClass('on-left');
         }
+        
+        // 加载后立即检查位置是否越界（例如从 PC 切换到手机预览）
+        // 使用 setTimeout 确保 DOM 渲染完成
+        setTimeout(clampPosition, 100);
     }
+
+    // 监听窗口大小变化
+    $(window).on('resize', () => {
+        // 使用防抖或简单的 requestAnimationFrame 优化
+        requestAnimationFrame(clampPosition);
+    });
     
     // 开始拖拽
     const startDrag = (e) => {
@@ -1246,8 +1282,8 @@ function bindQuickAccessEvents() {
         // 计算新位置，限制在容器可视范围内
         // limit bounds relative to current scroll view
         let newTop = startTop + deltaY;
-        const minTop = scrollTop + 100;
-        const maxTop = scrollTop + container.height - panelHeight + 200;
+        const minTop = scrollTop + 10;
+        const maxTop = scrollTop + container.height - panelHeight - 10;
         
         newTop = Math.max(minTop, Math.min(newTop, maxTop));
         
@@ -1274,6 +1310,9 @@ function bindQuickAccessEvents() {
         isDragging = false;
         $panel.removeClass('dragging');
         
+        // 再次检查边界，确保最终位置合法
+        clampPosition();
+
         // 保存位置
         const settings = getSettings();
         settings.quickAccessPosition = {
