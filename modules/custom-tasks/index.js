@@ -1188,7 +1188,7 @@ export function renderCustomTasksPanel() {
                 <div id="jtw-parallel-depth-container" style="margin-bottom: 10px;">
                     <label>深度值 (Depth)</label>
                     <input type="number" id="jtw-parallel-task-depth" class="jtw-input" value="4" min="0" max="999" />
-                    <div class="jtw-hint">0=最后一条消息之后，1=最后一条之前，以此类推</div>
+                    <div class="jtw-hint">注意：此处的深度，是完整提示词的位置（包括预设，请在提示词查看器中检查） - 0为最底层</div>
                 </div>
                 <div id="jtw-parallel-role-container" style="margin-bottom: 10px;">
                     <label>注入角色 (Role)</label>
