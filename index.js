@@ -953,6 +953,8 @@ function initStoryAssistantModule() {
         world_names,
         getChatHistory,
         getWorldInfoContent,
+        extractIncludeTags,
+        removeTaggedContent,
         callLLM,
         callLLMJson,
         power_user

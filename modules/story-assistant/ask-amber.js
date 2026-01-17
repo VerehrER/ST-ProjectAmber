@@ -145,8 +145,8 @@ async function buildMessages(userQuestion, options = {}) {
         let startLayer = options.historyStartLayer;
         let endLayer = options.historyEndLayer;
         
-        // 如果没有指定范围，使用全局设置的消息数量
-        if (!startLayer && !endLayer) {
+        // 只有当 min 留空时才使用全局设置
+        if (!startLayer || startLayer === '') {
             const historyCount = settings.historyCount || 50;
             const chatHistory = getChatHistory(historyCount);
             let chatHistoryContent = amberSettings.chatHistoryTemplate || getDefaultAmberSettings().chatHistoryTemplate;
@@ -154,7 +154,7 @@ async function buildMessages(userQuestion, options = {}) {
             user2Parts.push(chatHistoryContent);
         } else {
             // 根据层数范围获取消息
-            startLayer = parseInt(startLayer) || 1;
+            startLayer = parseInt(startLayer);
             endLayer = parseInt(endLayer) || totalMessages;
             
             // 限制范围
@@ -166,9 +166,26 @@ async function buildMessages(userQuestion, options = {}) {
             const endIndex = endLayer;
             
             const selectedMessages = chat.slice(startIndex, endIndex);
+            
+            // 应用标签处理（和 getChatHistory 相同的逻辑）
+            const { extractIncludeTags, removeTaggedContent } = dependencies;
             const lines = selectedMessages.map(msg => {
                 const name = msg.is_user ? (ctx.name1 || '{{user}}') : (msg.name || ctx.name2 || '{{char}}');
-                const content = msg.mes || '';
+                let content = msg.mes || '';
+                
+                // 1. 先处理仅包括标签（如果设置了）
+                if (settings.includeTags && settings.includeTags.trim()) {
+                    content = extractIncludeTags(content, settings.includeTags);
+                    
+                    // 如果开启了额外排除处理，则继续处理
+                    if (settings.applyExcludeAfterInclude && content) {
+                        content = removeTaggedContent(content, settings.excludeTags);
+                    }
+                } else {
+                    // 2. 没有仅包括标签时，直接移除排除标签内容
+                    content = removeTaggedContent(content, settings.excludeTags);
+                }
+                
                 return `${name}: ${content}`;
             });
             
@@ -229,8 +246,20 @@ async function askAmber(userQuestion, options = {}) {
  * 显示主弹窗
  */
 export function showModal() {
+    const { getContext } = dependencies;
+    const ctx = getContext();
+    const chat = ctx.chat || [];
+    const totalMessages = chat.length;
+    
     $('#jtw-ask-amber-modal').fadeIn(200);
     switchTab('chat');
+    
+    // 设置 max 默认值为当前最新楼层数
+    $('#jtw-aa-history-end').attr('placeholder', totalMessages).attr('max', totalMessages);
+    // 如果没有填写，设置为默认值
+    if (!$('#jtw-aa-history-end').val()) {
+        $('#jtw-aa-history-end').val(totalMessages);
+    }
     
     // 清空上次的输入和结果
     // $('#jtw-aa-question').val('');
