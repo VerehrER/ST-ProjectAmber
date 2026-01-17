@@ -1119,6 +1119,17 @@ function bindModalEvents() {
     const charExtract = settings.characterExtract;
     const defaultCharExtract = defaultSettings.characterExtract;
     
+    // 阻止弹窗内部点击事件冒泡，防止触发扩展面板关闭
+    $('#jtw-character-extract-modal .jtw-modal-content').off('click.jtw-ce-stop').on('click.jtw-ce-stop', function(e) {
+        e.stopPropagation();
+    });
+    $('#jtw-ce-result-modal .jtw-modal-content').off('click.jtw-ce-result-stop').on('click.jtw-ce-result-stop', function(e) {
+        e.stopPropagation();
+    });
+    $('#jtw-ce-prompt-modal .jtw-modal-content').off('click.jtw-ce-prompt-stop').on('click.jtw-ce-prompt-stop', function(e) {
+        e.stopPropagation();
+    });
+    
     // 关闭主弹窗
     $(document).off('click.jtw-ce-close-modal').on('click.jtw-ce-close-modal', '.jtw-ce-close-modal', hideModal);
     $('#jtw-character-extract-modal').off('click.jtw-ce-bg').on('click.jtw-ce-bg', function(e) {

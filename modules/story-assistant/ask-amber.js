@@ -762,6 +762,17 @@ function bindModalEvents() {
     const amberSettings = getAmberSettings();
     const defaults = getDefaultAmberSettings();
     
+    // 阻止弹窗内部点击事件冒泡，防止触发扩展面板关闭
+    $('#jtw-ask-amber-modal .jtw-modal-content').off('click.jtw-aa-stop').on('click.jtw-aa-stop', function(e) {
+        e.stopPropagation();
+    });
+    $('#jtw-aa-prompt-preview-modal .jtw-modal-content').off('click.jtw-aa-preview-stop').on('click.jtw-aa-preview-stop', function(e) {
+        e.stopPropagation();
+    });
+    $('#jtw-aa-result-modal .jtw-modal-content').off('click.jtw-aa-result-stop').on('click.jtw-aa-result-stop', function(e) {
+        e.stopPropagation();
+    });
+    
     // 关闭主弹窗
     $(document).off('click.jtw-aa-close-modal').on('click.jtw-aa-close-modal', '.jtw-aa-close-modal', hideModal);
     $('#jtw-ask-amber-modal').off('click.jtw-aa-bg').on('click.jtw-aa-bg', function(e) {
