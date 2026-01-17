@@ -390,7 +390,7 @@ async function refreshActivatedWorldInfoEntries() {
         const chatMessages = chat.map(msg => msg.mes || '').reverse();
         
         // 使用一个较大的 maxContext 值，确保能扫描足够的内容
-        const maxContext = 16000;
+        const maxContext = 200000;
         
         // 调用 checkWorldInfo，isDryRun=true 表示不触发事件和副作用
         const result = await checkWorldInfo(chatMessages, maxContext, true);
