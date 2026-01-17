@@ -615,10 +615,10 @@ function getModalHtml() {
                                     </div>
                                     <div class="jtw-aa-worldinfo-mode" id="jtw-aa-worldinfo-mode">
                                         <label style="margin-left: 24px;">
-                                            <input type="radio" name="jtw-aa-worldinfo-mode" value="all" checked /> 全部条目
+                                            <input type="radio" name="jtw-aa-worldinfo-mode" value="activated" checked /> 仅激活的条目
                                         </label>
                                         <label style="margin-left: 10px;">
-                                            <input type="radio" name="jtw-aa-worldinfo-mode" value="activated" /> 仅激活的条目
+                                            <input type="radio" name="jtw-aa-worldinfo-mode" value="all" /> 全部条目
                                         </label>
                                         <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"会实时检测当前聊天中的关键词匹配）</div>
                                     </div>
