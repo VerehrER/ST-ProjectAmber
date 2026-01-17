@@ -123,9 +123,21 @@ export function renderStoryAssistantPanel() {
  * @param {function} saveSettings - 保存设置回调
  */
 export function initStoryAssistantEvents(saveSettings) {
-    // 点击功能项进入设置
+    // 点击功能项进入设置或触发自定义行为
     $('#jtw-assistant-list').on('click', '.jtw-assistant-item', function() {
         const moduleId = $(this).data('module-id');
+        const moduleData = registeredModules.get(moduleId);
+        
+        // 如果模块定义了 onModuleClick 方法，先调用它
+        if (moduleData?.module?.onModuleClick) {
+            const result = moduleData.module.onModuleClick();
+            // 如果返回 false，则不执行默认的面板切换
+            if (result === false) {
+                return;
+            }
+        }
+        
+        // 默认行为：显示模块设置面板
         showModuleSettings(moduleId);
     });
     

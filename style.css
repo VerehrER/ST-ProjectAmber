@@ -581,3 +581,263 @@
 .jtw-assistant-feature-content {
     display: none;
 }
+
+/* ==================== 角色提取弹窗样式 ==================== */
+
+/* 主弹窗内容 */
+.jtw-ce-modal-content {
+    max-width: 1100px;
+    width: 95%;
+    max-height: 85vh;
+}
+
+/* 标签页导航 */
+.jtw-ce-tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.jtw-ce-tab {
+    padding: 12px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor);
+    font-size: 14px;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.jtw-ce-tab:hover {
+    opacity: 0.8;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.jtw-ce-tab.active {
+    opacity: 1;
+    border-bottom-color: var(--SmartThemeChatTintColor);
+}
+
+.jtw-ce-tab-content {
+    display: none;
+}
+
+.jtw-ce-tab-content.active {
+    display: block;
+}
+
+/* 空状态提示 */
+.jtw-ce-empty-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+}
+
+.jtw-ce-empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.jtw-ce-empty-text {
+    font-size: 18px;
+    color: var(--SmartThemeBodyColor);
+    margin-bottom: 8px;
+}
+
+.jtw-ce-empty-hint-text {
+    font-size: 14px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.8;
+    margin-bottom: 20px;
+}
+
+/* 条目信息栏 */
+.jtw-ce-entry-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    padding: 12px 15px;
+    background: rgba(0, 0, 0, 0.15);
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    margin-bottom: 15px;
+    font-size: 13px;
+}
+
+.jtw-ce-entry-info span {
+    color: var(--SmartThemeBodyColor);
+}
+
+.jtw-ce-entry-info strong {
+    color: var(--SmartThemeEmColor);
+}
+
+/* 文本区域 */
+.jtw-ce-textarea {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    background: var(--SmartThemeBlurTintColor);
+    color: var(--SmartThemeBodyColor);
+    font-family: 'Courier New', Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.jtw-ce-textarea:focus {
+    outline: none;
+    border-color: var(--SmartThemeChatTintColor);
+}
+
+/* 操作按钮区域 */
+.jtw-ce-actions {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.jtw-ce-actions .jtw-status {
+    margin: 0;
+    flex: 1;
+}
+
+/* 设置页面网格布局 */
+.jtw-ce-settings-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    min-height: 500px;
+}
+
+@media (max-width: 900px) {
+    .jtw-ce-settings-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.jtw-ce-settings-left {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.jtw-ce-settings-right {
+    display: flex;
+    flex-direction: column;
+}
+
+/* 预览区域 */
+.jtw-ce-preview-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.jtw-ce-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.jtw-ce-preview-header h4 {
+    margin: 0;
+}
+
+.jtw-ce-prompt-preview {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 450px;
+    border: 1px solid var(--SmartThemeBorderColor);
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.1);
+}
+
+.jtw-ce-prompt-preview .jtw-prompt-message {
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+.jtw-ce-prompt-preview .jtw-prompt-message:last-child {
+    border-bottom: none;
+}
+
+.jtw-ce-prompt-preview .jtw-prompt-content {
+    max-height: 200px;
+}
+
+/* 运行区域 */
+.jtw-ce-run-section {
+    margin-top: auto;
+    padding-top: 15px;
+    border-top: 1px solid var(--SmartThemeBorderColor);
+}
+
+.jtw-ce-run-section .jtw-btn {
+    width: 100%;
+}
+
+.jtw-ce-run-section .jtw-status {
+    margin-top: 10px;
+}
+
+/* 加载状态 */
+.jtw-ce-loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.7;
+}
+
+.jtw-ce-error {
+    padding: 20px;
+    text-align: center;
+    color: #f44336;
+}
+
+.jtw-ce-empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.7;
+}
+
+/* 结果弹窗 */
+.jtw-ce-result-modal-content {
+    max-width: 700px;
+    width: 90%;
+}
+
+.jtw-ce-result-count {
+    padding: 10px 15px;
+    background: rgba(76, 175, 80, 0.15);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    border-radius: 6px;
+    color: #81c784;
+    font-weight: bold;
+    margin-bottom: 15px;
+    text-align: center;
+}
+
+.jtw-ce-result-hint {
+    font-size: 12px;
+    color: var(--SmartThemeEmColor);
+    opacity: 0.8;
+    margin-top: 8px;
+    text-align: center;
+}
