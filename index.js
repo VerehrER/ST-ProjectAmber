@@ -1407,12 +1407,14 @@ function handleQuickAccessAction(action) {
 function openExtensionPanel(tabId) {
     // 1. 首先展开顶层的扩展列表drawer
     const $extensionsDrawer = $('#extensions-settings-button');
-    const $extensionsContent = $('#rm_extensions_block');
+    const $drawerContent = $extensionsDrawer.find('.drawer-content');
+    const $drawerIcon = $extensionsDrawer.find('.drawer-icon');
     
-    // 检查扩展列表是否已展开（通过检查是否有openDrawer class）
-    if (!$extensionsDrawer.hasClass('openDrawer')) {
-        // 未展开，点击drawer-toggle展开
-        $extensionsDrawer.find('.drawer-toggle').trigger('click');
+    // 检查扩展列表是否已展开（通过检查drawer-content是否有openDrawer class）
+    if (!$drawerContent.hasClass('openDrawer')) {
+        // 切换class来展开
+        $drawerIcon.removeClass('closedIcon').addClass('openIcon');
+        $drawerContent.removeClass('closedDrawer').addClass('openDrawer');
     }
     
     // 2. 延迟后展开Project Amber的inline-drawer
@@ -1423,11 +1425,10 @@ function openExtensionPanel(tabId) {
         
         // 如果抽屉未展开，展开它
         if ($drawer.length) {
-            const $drawerContent = $drawer.find('.inline-drawer-content');
-            const $drawerIcon = $drawer.find('.inline-drawer-icon');
+            const $inlineDrawerIcon = $drawer.find('.inline-drawer-icon');
             
             // 检查是否已展开（通过检查icon是否有down class）
-            if ($drawerIcon.hasClass('down')) {
+            if ($inlineDrawerIcon.hasClass('down')) {
                 // 未展开，点击展开
                 $drawer.find('.inline-drawer-toggle').trigger('click');
             }
