@@ -611,8 +611,8 @@ export function renderSettingsPanel() {
                                         <input type="number" id="jtw-aa-history-start" class="jtw-input jtw-aa-layer-input" placeholder="开始" min="1" />
                                         <span>~</span>
                                         <input type="number" id="jtw-aa-history-end" class="jtw-input jtw-aa-layer-input" placeholder="结束" min="1" />
-                                        <span class="jtw-hint" style="margin-left: 8px;">（留空使用全局设置）</span>
                                     </div>
+                                    <div class="jtw-hint" style="padding-left: 24px;">（留空使用全局设置）</div>
                                 </div>
                             </div>
                         </div>
