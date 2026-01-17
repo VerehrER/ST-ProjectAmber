@@ -94,6 +94,11 @@ async function buildMessages(userQuestion, options = {}) {
     const settings = getSettings();
     const amberSettings = getAmberSettings();
     
+    // 检查用户问题是否为空，防止误操作
+    if (!userQuestion || !userQuestion.trim()) {
+        throw new Error('请输入您的问题');
+    }
+    
     const ctx = getContext();
     const char = ctx.characters?.[ctx.characterId];
     const description = char?.description || char?.data?.description || '';
