@@ -386,6 +386,7 @@ async function getWorldInfoContent(options = {}) {
  */
 async function refreshActivatedWorldInfoEntries(options = {}) {
     try {
+        const settings = getSettings();
         const ctx = getContext();
         const chat = ctx.chat || [];
         const totalMessages = chat.length;
@@ -403,6 +404,12 @@ async function refreshActivatedWorldInfoEntries(options = {}) {
             
             messagesToScan = chat.slice(startIndex, endIndex);
             console.log(`[${EXT_NAME}] 检查世界书激活条目，层数范围: ${startLayer}-${endLayer} (共 ${messagesToScan.length} 条消息)`);
+        } else {
+            // 没有指定层数范围，使用通用设置的历史消息数量
+            const historyCount = settings.historyCount || 50;
+            const actualCount = Math.min(historyCount, totalMessages);
+            messagesToScan = chat.slice(-actualCount);
+            console.log(`[${EXT_NAME}] 检查世界书激活条目，使用通用设置: 最近 ${actualCount} 条消息`);
         }
         
         // 构建聊天消息数组（checkWorldInfo 需要的格式是反向的消息数组）

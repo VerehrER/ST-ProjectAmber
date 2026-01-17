@@ -506,7 +506,19 @@ async function getPromptPreviewData() {
     const userName = ctx.name1 || '{{user}}';
     const charName = char?.name || ctx.name2 || '{{char}}';
     const chatHistory = getChatHistory(charExtract.historyCount || 50);
-    const worldInfo = await getWorldInfoContent({ activatedOnly: true });
+    
+    // 计算世界书检查的层数范围（使用角色提取的历史消息数量）
+    const chat = ctx.chat || [];
+    const totalMessages = chat.length;
+    const historyCount = charExtract.historyCount || settings.historyCount || 50;
+    const startLayer = Math.max(1, totalMessages - historyCount + 1);
+    const endLayer = totalMessages;
+    
+    const worldInfo = await getWorldInfoContent({ 
+        activatedOnly: true,
+        startLayer: startLayer,
+        endLayer: endLayer
+    });
     const existingNames = await getExistingCharacters();
     const existingCharacters = existingNames.length > 0 
         ? `\n\n**已存在角色（不要重复）：** ${existingNames.join('、')}`
