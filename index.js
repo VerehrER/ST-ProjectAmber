@@ -1218,10 +1218,8 @@ function bindQuickAccessEvents() {
         const clientY = e.type.includes('touch') ? e.originalEvent.touches[0].clientY : e.clientY;
         startY = clientY;
         
-        // 获取当前位置
-        const rect = $panel[0].getBoundingClientRect();
-        const containerRect = $panel.parent()[0].getBoundingClientRect();
-        startTop = rect.top - containerRect.top;
+        // 获取当前位置 - 使用offsetTop以确保相对定位准确
+        startTop = $panel[0].offsetTop;
         
         $panel.addClass('dragging');
         e.preventDefault();
@@ -1242,10 +1240,16 @@ function bindQuickAccessEvents() {
         
         const container = getContainer();
         const panelHeight = $panel.outerHeight();
+        const $parent = $panel.parent();
+        const scrollTop = $parent.scrollTop() || 0;
         
-        // 计算新位置，限制在容器内
+        // 计算新位置，限制在容器可视范围内
+        // limit bounds relative to current scroll view
         let newTop = startTop + deltaY;
-        newTop = Math.max(10, Math.min(newTop, container.height - panelHeight - 10));
+        const minTop = scrollTop + 10;
+        const maxTop = scrollTop + container.height - panelHeight - 10;
+        
+        newTop = Math.max(minTop, Math.min(newTop, maxTop));
         
         // 检测左右侧
         const containerRect = $panel.parent()[0].getBoundingClientRect();
@@ -1271,11 +1275,9 @@ function bindQuickAccessEvents() {
         $panel.removeClass('dragging');
         
         // 保存位置
-        const rect = $panel[0].getBoundingClientRect();
-        const containerRect = $panel.parent()[0].getBoundingClientRect();
         const settings = getSettings();
         settings.quickAccessPosition = {
-            top: rect.top - containerRect.top,
+            top: $panel[0].offsetTop,
             side: $panel.hasClass('on-left') ? 'left' : 'right'
         };
         saveSettings();
