@@ -490,7 +490,7 @@
     font-size: 13px;
     line-height: 1.6;
     color: var(--SmartThemeBodyColor);
-    max-height: 600px;
+    max-height: 400px;
     overflow-y: auto;
 }
 
@@ -762,10 +762,11 @@
 
 .jtw-ce-prompt-preview {
     overflow-y: auto;
-    max-height: 60vh;
+    /* max-height: 60vh; */
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.1);
+    max-height: 400px;
 }
 
 /* 运行区域 */
