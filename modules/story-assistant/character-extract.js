@@ -1119,43 +1119,53 @@ function bindModalEvents() {
     const charExtract = settings.characterExtract;
     const defaultCharExtract = defaultSettings.characterExtract;
     
-    // 阻止弹窗内部点击事件冒泡，防止触发扩展面板关闭
-    $('#jtw-character-extract-modal .jtw-modal-content').off('click.jtw-ce-stop').on('click.jtw-ce-stop', function(e) {
+    // 关闭主弹窗 - 直接绑定到元素
+    $('#jtw-character-extract-modal .jtw-ce-close-modal').off('click').on('click', function(e) {
         e.stopPropagation();
+        hideModal();
     });
-    $('#jtw-ce-result-modal .jtw-modal-content').off('click.jtw-ce-result-stop').on('click.jtw-ce-result-stop', function(e) {
-        e.stopPropagation();
-    });
-    $('#jtw-ce-prompt-modal .jtw-modal-content').off('click.jtw-ce-prompt-stop').on('click.jtw-ce-prompt-stop', function(e) {
-        e.stopPropagation();
-    });
-    
-    // 关闭主弹窗
-    $(document).off('click.jtw-ce-close-modal').on('click.jtw-ce-close-modal', '.jtw-ce-close-modal', hideModal);
-    $('#jtw-character-extract-modal').off('click.jtw-ce-bg').on('click.jtw-ce-bg', function(e) {
+    $('#jtw-character-extract-modal').off('click').on('click', function(e) {
         if (e.target === this) hideModal();
+    });
+    // 阻止弹窗内容区点击冒泡
+    $('#jtw-character-extract-modal .jtw-modal-content').off('click').on('click', function(e) {
+        e.stopPropagation();
     });
     
     // 关闭结果弹窗
-    $(document).off('click.jtw-ce-close-result').on('click.jtw-ce-close-result', '.jtw-ce-close-result', hideResultModal);
-    $('#jtw-ce-result-modal').off('click.jtw-ce-result-bg').on('click.jtw-ce-result-bg', function(e) {
+    $('#jtw-ce-result-modal .jtw-ce-close-result').off('click').on('click', function(e) {
+        e.stopPropagation();
+        hideResultModal();
+    });
+    $('#jtw-ce-result-modal').off('click').on('click', function(e) {
         if (e.target === this) hideResultModal();
+    });
+    $('#jtw-ce-result-modal .jtw-modal-content').off('click').on('click', function(e) {
+        e.stopPropagation();
     });
     
     // 关闭提示词预览弹窗
-    $(document).off('click.jtw-ce-close-prompt').on('click.jtw-ce-close-prompt', '.jtw-ce-close-prompt', hidePromptModal);
-    $('#jtw-ce-prompt-modal').off('click.jtw-ce-prompt-bg').on('click.jtw-ce-prompt-bg', function(e) {
+    $('#jtw-ce-prompt-modal .jtw-ce-close-prompt').off('click').on('click', function(e) {
+        e.stopPropagation();
+        hidePromptModal();
+    });
+    $('#jtw-ce-prompt-modal').off('click').on('click', function(e) {
         if (e.target === this) hidePromptModal();
     });
+    $('#jtw-ce-prompt-modal .jtw-modal-content').off('click').on('click', function(e) {
+        e.stopPropagation();
+    });
     
-    // 标签页切换
-    $(document).off('click.jtw-ce-tab').on('click.jtw-ce-tab', '.jtw-ce-tab', function() {
+    // 标签页切换 - 直接绑定
+    $('#jtw-character-extract-modal .jtw-ce-tab').off('click').on('click', function(e) {
+        e.stopPropagation();
         const tab = $(this).data('tab');
         switchTab(tab);
     });
     
-    // 前往设置按钮
-    $(document).off('click.jtw-ce-goto-settings').on('click.jtw-ce-goto-settings', '.jtw-ce-goto-settings', function() {
+    // 前往设置按钮 - 直接绑定
+    $('#jtw-character-extract-modal .jtw-ce-goto-settings').off('click').on('click', function(e) {
+        e.stopPropagation();
         switchTab('settings');
     });
     

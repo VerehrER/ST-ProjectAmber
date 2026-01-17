@@ -762,37 +762,46 @@ function bindModalEvents() {
     const amberSettings = getAmberSettings();
     const defaults = getDefaultAmberSettings();
     
-    // 阻止弹窗内部点击事件冒泡，防止触发扩展面板关闭
-    $('#jtw-ask-amber-modal .jtw-modal-content').off('click.jtw-aa-stop').on('click.jtw-aa-stop', function(e) {
+    // 关闭主弹窗 - 直接绑定到元素
+    $('#jtw-ask-amber-modal .jtw-aa-close-modal').off('click').on('click', function(e) {
         e.stopPropagation();
+        hideModal();
     });
-    $('#jtw-aa-prompt-preview-modal .jtw-modal-content').off('click.jtw-aa-preview-stop').on('click.jtw-aa-preview-stop', function(e) {
-        e.stopPropagation();
-    });
-    $('#jtw-aa-result-modal .jtw-modal-content').off('click.jtw-aa-result-stop').on('click.jtw-aa-result-stop', function(e) {
-        e.stopPropagation();
-    });
-    
-    // 关闭主弹窗
-    $(document).off('click.jtw-aa-close-modal').on('click.jtw-aa-close-modal', '.jtw-aa-close-modal', hideModal);
-    $('#jtw-ask-amber-modal').off('click.jtw-aa-bg').on('click.jtw-aa-bg', function(e) {
+    $('#jtw-ask-amber-modal').off('click').on('click', function(e) {
         if (e.target === this) hideModal();
+    });
+    // 阻止弹窗内容区点击冒泡
+    $('#jtw-ask-amber-modal .jtw-modal-content').off('click').on('click', function(e) {
+        e.stopPropagation();
     });
     
     // 关闭提示词预览弹窗
-    $(document).off('click.jtw-aa-close-preview').on('click.jtw-aa-close-preview', '.jtw-aa-close-preview', hidePromptPreviewModal);
-    $('#jtw-aa-prompt-preview-modal').off('click.jtw-aa-preview-bg').on('click.jtw-aa-preview-bg', function(e) {
+    $('#jtw-aa-prompt-preview-modal .jtw-aa-close-preview').off('click').on('click', function(e) {
+        e.stopPropagation();
+        hidePromptPreviewModal();
+    });
+    $('#jtw-aa-prompt-preview-modal').off('click').on('click', function(e) {
         if (e.target === this) hidePromptPreviewModal();
+    });
+    $('#jtw-aa-prompt-preview-modal .jtw-modal-content').off('click').on('click', function(e) {
+        e.stopPropagation();
     });
     
     // 关闭结果弹窗
-    $(document).off('click.jtw-aa-close-result').on('click.jtw-aa-close-result', '.jtw-aa-close-result', hideResultModal);
-    $('#jtw-aa-result-modal').off('click.jtw-aa-result-bg').on('click.jtw-aa-result-bg', function(e) {
+    $('#jtw-aa-result-modal .jtw-aa-close-result').off('click').on('click', function(e) {
+        e.stopPropagation();
+        hideResultModal();
+    });
+    $('#jtw-aa-result-modal').off('click').on('click', function(e) {
         if (e.target === this) hideResultModal();
     });
+    $('#jtw-aa-result-modal .jtw-modal-content').off('click').on('click', function(e) {
+        e.stopPropagation();
+    });
     
-    // 标签页切换
-    $(document).off('click.jtw-aa-tab').on('click.jtw-aa-tab', '.jtw-aa-tab', function() {
+    // 标签页切换 - 直接绑定
+    $('#jtw-ask-amber-modal .jtw-aa-tab').off('click').on('click', function(e) {
+        e.stopPropagation();
         const tab = $(this).data('tab');
         switchTab(tab);
     });
