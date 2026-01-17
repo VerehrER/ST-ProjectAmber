@@ -539,7 +539,11 @@ async function previewTaskPrompt(index) {
         }
         
         // 获取世界书内容
-        const worldInfo = await getWorldInfoContent();
+        const worldInfo = await getWorldInfoContent({ 
+            activatedOnly: true,
+            startLayer: task.historyStartLayer,
+            endLayer: task.historyEndLayer
+        });
         
         let htmlContent = '';
         
@@ -700,7 +704,11 @@ async function runTask(index) {
         }
         
         // 获取世界书内容
-        const worldInfo = await getWorldInfoContent();
+        const worldInfo = await getWorldInfoContent({ 
+            activatedOnly: true,
+            startLayer: task.historyStartLayer,
+            endLayer: task.historyEndLayer
+        });
         
         // 构建变量替换函数
         const replaceVars = (template) => {
@@ -1415,7 +1423,7 @@ export async function onChatCompletionPromptReady(eventData) {
         let worldInfoCache = null;
         const getWorldInfo = async () => {
             if (worldInfoCache === null) {
-                worldInfoCache = await getWorldInfoContent();
+                worldInfoCache = await getWorldInfoContent({ activatedOnly: true });
             }
             return worldInfoCache;
         };

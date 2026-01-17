@@ -324,7 +324,10 @@ async function getWorldInfoContent(options = {}) {
         
         if (activatedOnly) {
             // 主动执行世界书检查来获取激活的条目
-            const activatedEntries = await refreshActivatedWorldInfoEntries();
+            const activatedEntries = await refreshActivatedWorldInfoEntries({
+                startLayer: options.startLayer,
+                endLayer: options.endLayer
+            });
             
             // 筛选出属于目标世界书的条目
             const activatedUids = new Set(
@@ -376,15 +379,34 @@ async function getWorldInfoContent(options = {}) {
 
 /**
  * 主动刷新激活的世界书条目
+ * @param {object} options - 选项
+ * @param {number} options.startLayer - 开始层数（1-based，可选）
+ * @param {number} options.endLayer - 结束层数（1-based，可选）
  * @returns {Promise<Array>} 激活的条目数组
  */
-async function refreshActivatedWorldInfoEntries() {
+async function refreshActivatedWorldInfoEntries(options = {}) {
     try {
         const ctx = getContext();
         const chat = ctx.chat || [];
+        const totalMessages = chat.length;
+        
+        let messagesToScan = chat;
+        
+        // 如果指定了层数范围，只获取该范围的消息
+        if (options.startLayer || options.endLayer) {
+            const startLayer = options.startLayer ? Math.max(1, parseInt(options.startLayer)) : 1;
+            const endLayer = options.endLayer ? Math.min(totalMessages, parseInt(options.endLayer)) : totalMessages;
+            
+            // 转换为数组索引（层数从1开始，数组索引从0开始）
+            const startIndex = startLayer - 1;
+            const endIndex = endLayer;
+            
+            messagesToScan = chat.slice(startIndex, endIndex);
+            console.log(`[${EXT_NAME}] 检查世界书激活条目，层数范围: ${startLayer}-${endLayer} (共 ${messagesToScan.length} 条消息)`);
+        }
         
         // 构建聊天消息数组（checkWorldInfo 需要的格式是反向的消息数组）
-        const chatMessages = chat.map(msg => msg.mes || '').reverse();
+        const chatMessages = messagesToScan.map(msg => msg.mes || '').reverse();
         
         // 使用一个较大的 maxContext 值，确保能扫描足够的内容
         const maxContext = 200000;

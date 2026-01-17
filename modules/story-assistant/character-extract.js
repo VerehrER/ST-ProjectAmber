@@ -506,7 +506,7 @@ async function getPromptPreviewData() {
     const userName = ctx.name1 || '{{user}}';
     const charName = char?.name || ctx.name2 || '{{char}}';
     const chatHistory = getChatHistory(charExtract.historyCount || 50);
-    const worldInfo = await getWorldInfoContent();
+    const worldInfo = await getWorldInfoContent({ activatedOnly: true });
     const existingNames = await getExistingCharacters();
     const existingCharacters = existingNames.length > 0 
         ? `\n\n**已存在角色（不要重复）：** ${existingNames.join('、')}`

@@ -135,7 +135,11 @@ async function buildMessages(userQuestion, options = {}) {
     // 如果注入世界书
     if (options.includeWorldInfo) {
         // 根据选项决定是获取全部条目还是仅激活的条目
-        const worldInfo = await getWorldInfoContent({ activatedOnly: options.worldInfoActivatedOnly });
+        const worldInfo = await getWorldInfoContent({ 
+            activatedOnly: options.worldInfoActivatedOnly,
+            startLayer: options.historyStartLayer,
+            endLayer: options.historyEndLayer
+        });
         let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
         worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
         user2Parts.push(worldInfoContent);
