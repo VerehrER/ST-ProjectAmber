@@ -34,22 +34,25 @@ const defaultSettings = {
     lastExtractedJson: null,   // 上次提取的 JSON
     // 自定义任务列表
     customTasks: [],           // 自定义任务条目数组
-    // 角色列表提取设置
+    // 提取设置
+    historyCount: 50,          // 发送的历史消息数量
     extractModel: "",          // 自定义模型名称（留空使用当前模型）
     includeTags: "",           // 仅包括的标签列表（留空则不限制）
     applyExcludeAfterInclude: false,  // 提取包括标签后是否再执行排除处理
     excludeTags: "summary,safety",  // 要排除的标签列表
     thoughtTags: "think,thinking,thought",  // 思维链标签（会处理孤立闭合标签）
     aggressiveThoughtRemoval: false,  // 激进删除思维链：直接删除最后一个闭合标签前的所有内容
-    historyCount: 50,          // 发送的历史消息数量
-    characterListPosition: 0,  // 角色列表条目位置
-    characterListOrder: 100,   // 角色列表条目排序
-    characterListDepth: 4,     // 角色列表 @ Depth 的深度值
-    characterListName: "出场角色列表",  // 角色列表世界书条目名称
-    // 角色提取提示词
-    promptU1: "你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。",
-    promptA1: "明白。请提供【世界观】和【剧情经历】，我将提取角色并以JSON数组输出。",
-    promptU2: `**1. 世界观：**
+    // 角色提取设置
+    characterExtract: {
+        historyCount: 50,  // 角色提取使用的历史消息数量
+        characterListPosition: 0,  // 角色列表条目位置
+        characterListOrder: 100,   // 角色列表条目排序
+        characterListDepth: 4,     // 角色列表 @ Depth 的深度值
+        characterListName: "出场角色列表",  // 角色列表世界书条目名称
+        // 角色提取提示词
+        promptU1: "你是TRPG数据整理助手。从剧情文本中提取{{user}}遇到的所有角色/NPC，整理为JSON数组。",
+        promptA1: "明白。请提供【世界观】和【剧情经历】，我将提取角色并以JSON数组输出。",
+        promptU2: `**1. 世界观：**
 <world_info>
 {{description}}
 {{worldInfo}}
@@ -78,7 +81,8 @@ const defaultSettings = {
     "speaking_style": "说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）等。对待主角的态度（尊敬、喜爱、蔑视、恐惧等）。"
   }
 }]`,
-    promptA2: "了解，开始生成JSON:",
+        promptA2: "了解，开始生成JSON:"
+    }
 
 };
 

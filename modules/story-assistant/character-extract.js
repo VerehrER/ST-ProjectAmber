@@ -59,11 +59,12 @@ function getPositionText(position, depth) {
 function buildExtractCharactersMessages(vars) {
     const { getSettings, defaultSettings } = dependencies;
     const settings = getSettings();
+    const charExtract = settings.characterExtract || defaultSettings.characterExtract;
     const prompts = {
-        u1: settings.promptU1 || defaultSettings.promptU1,
-        a1: settings.promptA1 || defaultSettings.promptA1,
-        u2: settings.promptU2 || defaultSettings.promptU2,
-        a2: settings.promptA2 || defaultSettings.promptA2
+        u1: charExtract.promptU1,
+        a1: charExtract.promptA1,
+        u2: charExtract.promptU2,
+        a2: charExtract.promptA2
     };
     
     const replaceVars = (template) => {
@@ -90,9 +91,10 @@ function buildExtractCharactersMessages(vars) {
  * @returns {Promise<{entry: object|null, worldbook: string|null}>}
  */
 async function getCurrentWorldbookEntry() {
-    const { getSettings, getCharacterWorldbook, loadWorldInfo, world_names } = dependencies;
+    const { getSettings, getCharacterWorldbook, loadWorldInfo, world_names, defaultSettings } = dependencies;
     const settings = getSettings();
-    const entryName = settings.characterListName || '出场角色列表';
+    const charExtract = settings.characterExtract || defaultSettings.characterExtract;
+    const entryName = charExtract.characterListName || '出场角色列表';
     let targetBook = settings.targetWorldbook || getCharacterWorldbook();
     
     if (!targetBook || !world_names?.includes(targetBook)) {
@@ -154,7 +156,8 @@ async function saveEntryToWorldbook(content, options = {}) {
     
     try {
         const settings = getSettings();
-        const entryName = settings.characterListName || '出场角色列表';
+        const charExtract = settings.characterExtract || dependencies.defaultSettings.characterExtract;
+        const entryName = charExtract.characterListName || '出场角色列表';
         let targetBook = settings.targetWorldbook || getCharacterWorldbook();
         
         if (!targetBook || !world_names?.includes(targetBook)) {
@@ -183,7 +186,7 @@ async function saveEntryToWorldbook(content, options = {}) {
         }
 
         // 设置条目属性
-        const position = options.position ?? settings.characterListPosition ?? 0;
+        const position = options.position ?? charExtract.characterListPosition ?? 0;
         Object.assign(entry, {
             comment: entryName,
             content: content,
@@ -191,8 +194,8 @@ async function saveEntryToWorldbook(content, options = {}) {
             selective: true,
             disable: false,
             position: position,
-            depth: position === 4 ? (options.depth ?? settings.characterListDepth ?? 4) : undefined,
-            order: options.order ?? settings.characterListOrder ?? 100,
+            depth: position === 4 ? (options.depth ?? charExtract.characterListDepth ?? 4) : undefined,
+            order: options.order ?? charExtract.characterListOrder ?? 100,
         });
 
         await saveWorldInfo(targetBook, worldData, true);
@@ -227,8 +230,9 @@ async function appendCharactersToWorldbook(characters) {
  * @returns {Promise<{messages: Array, vars: object}>}
  */
 async function getPromptPreviewData() {
-    const { getSettings, getContext, getChatHistory, getWorldInfoContent, power_user } = dependencies;
+    const { getSettings, getContext, getChatHistory, getWorldInfoContent, power_user, defaultSettings } = dependencies;
     const settings = getSettings();
+    const charExtract = settings.characterExtract || defaultSettings.characterExtract;
     const ctx = getContext();
     
     const char = ctx.characters?.[ctx.characterId];
@@ -236,7 +240,7 @@ async function getPromptPreviewData() {
     const persona = power_user?.persona_description || '';
     const userName = ctx.name1 || '{{user}}';
     const charName = char?.name || ctx.name2 || '{{char}}';
-    const chatHistory = getChatHistory(settings.historyCount || 50);
+    const chatHistory = getChatHistory(charExtract.historyCount || 50);
     const worldInfo = await getWorldInfoContent();
     const existingNames = await getExistingCharacters();
     const existingCharacters = existingNames.length > 0 
@@ -362,8 +366,9 @@ function switchTab(tabName) {
  * 加载条目内容到编辑区
  */
 async function loadEntryContent() {
-    const { getSettings } = dependencies;
+    const { getSettings, defaultSettings } = dependencies;
     const settings = getSettings();
+    const charExtract = settings.characterExtract || defaultSettings.characterExtract;
     const { entry, worldbook } = await getCurrentWorldbookEntry();
     
     const $emptyHint = $('#jtw-ce-entry-empty');
@@ -385,7 +390,7 @@ async function loadEntryContent() {
     const positionText = getPositionText(entry.position, entry.depth);
     $info.html(`
         <span><strong>世界书:</strong> ${escapeHtml(worldbook || '未知')}</span>
-        <span><strong>条目名称:</strong> ${escapeHtml(settings.characterListName || '出场角色列表')}</span>
+        <span><strong>条目名称:</strong> ${escapeHtml(charExtract.characterListName || '出场角色列表')}</span>
         <span><strong>位置:</strong> ${positionText}</span>
         <span><strong>排序:</strong> ${entry.order || 100}</span>
     `);
@@ -594,6 +599,11 @@ export function renderSettingsPanel() {
                                         <label>条目名称</label>
                                         <input type="text" id="jtw-ce-entry-name" class="jtw-input" placeholder="出场角色列表" />
                                     </div>
+                                    <div style="margin-bottom: 10px;">
+                                        <label>历史消息数量</label>
+                                        <input type="number" id="jtw-ce-history-count" class="jtw-input" value="50" min="10" max="200" />
+                                        <div class="jtw-hint">角色提取时使用的历史消息数量</div>
+                                    </div>
                                 </div>
                                 
                                 <div class="jtw-section">
@@ -699,6 +709,12 @@ export function initSettingsEvents(saveSettings) {
     const { getSettings, defaultSettings } = dependencies;
     const settings = getSettings();
     
+    // 确保 characterExtract 对象存在
+    if (!settings.characterExtract) {
+        settings.characterExtract = { ...defaultSettings.characterExtract };
+    }
+    const charExtract = settings.characterExtract;
+    
     // 关闭主弹窗
     $('.jtw-ce-close-modal').on('click', hideModal);
     $('#jtw-character-extract-modal').on('click', function(e) {
@@ -744,41 +760,44 @@ export function initSettingsEvents(saveSettings) {
     $('#jtw-ce-result-save').on('click', saveExtractionResult);
     
     // 条目名称
-    $('#jtw-ce-entry-name').val(settings.characterListName || '出场角色列表').on('change', function() {
-        settings.characterListName = $(this).val();
+    $('#jtw-ce-entry-name').val(charExtract.characterListName || '出场角色列表').on('change', function() {
+        charExtract.characterListName = $(this).val();
+        saveSettings();
+    });
+    
+    // 历史消息数量
+    $('#jtw-ce-history-count').val(charExtract.historyCount || 50).on('change', function() {
+        charExtract.historyCount = parseInt($(this).val()) || 50;
         saveSettings();
     });
     
     // 提示词设置
-    const defaultU1 = defaultSettings.promptU1;
-    const defaultA1 = defaultSettings.promptA1;
-    const defaultU2 = defaultSettings.promptU2;
-    const defaultA2 = defaultSettings.promptA2;
+    const defaultCharExtract = defaultSettings.characterExtract;
     
-    $('#jtw-ce-prompt-u1').val(settings.promptU1 || defaultU1).on('change', function() {
-        settings.promptU1 = $(this).val();
+    $('#jtw-ce-prompt-u1').val(charExtract.promptU1 || defaultCharExtract.promptU1).on('change', function() {
+        charExtract.promptU1 = $(this).val();
         saveSettings();
     });
     
-    $('#jtw-ce-prompt-a1').val(settings.promptA1 || defaultA1).on('change', function() {
-        settings.promptA1 = $(this).val();
+    $('#jtw-ce-prompt-a1').val(charExtract.promptA1 || defaultCharExtract.promptA1).on('change', function() {
+        charExtract.promptA1 = $(this).val();
         saveSettings();
     });
     
-    $('#jtw-ce-prompt-u2').val(settings.promptU2 || defaultU2).on('change', function() {
-        settings.promptU2 = $(this).val();
+    $('#jtw-ce-prompt-u2').val(charExtract.promptU2 || defaultCharExtract.promptU2).on('change', function() {
+        charExtract.promptU2 = $(this).val();
         saveSettings();
     });
     
-    $('#jtw-ce-prompt-a2').val(settings.promptA2 || defaultA2).on('change', function() {
-        settings.promptA2 = $(this).val();
+    $('#jtw-ce-prompt-a2').val(charExtract.promptA2 || defaultCharExtract.promptA2).on('change', function() {
+        charExtract.promptA2 = $(this).val();
         saveSettings();
     });
     
     // 条目位置
-    $('#jtw-ce-position').val(settings.characterListPosition || 0).on('change', function() {
-        settings.characterListPosition = parseInt($(this).val());
-        if (settings.characterListPosition === 4) {
+    $('#jtw-ce-position').val(charExtract.characterListPosition || 0).on('change', function() {
+        charExtract.characterListPosition = parseInt($(this).val());
+        if (charExtract.characterListPosition === 4) {
             $('#jtw-ce-depth-container').show();
         } else {
             $('#jtw-ce-depth-container').hide();
@@ -786,17 +805,17 @@ export function initSettingsEvents(saveSettings) {
         saveSettings();
     });
     
-    if (settings.characterListPosition === 4) {
+    if (charExtract.characterListPosition === 4) {
         $('#jtw-ce-depth-container').show();
     }
     
-    $('#jtw-ce-depth').val(settings.characterListDepth || 4).on('change', function() {
-        settings.characterListDepth = parseInt($(this).val()) || 4;
+    $('#jtw-ce-depth').val(charExtract.characterListDepth || 4).on('change', function() {
+        charExtract.characterListDepth = parseInt($(this).val()) || 4;
         saveSettings();
     });
     
-    $('#jtw-ce-order').val(settings.characterListOrder || 100).on('change', function() {
-        settings.characterListOrder = parseInt($(this).val()) || 100;
+    $('#jtw-ce-order').val(charExtract.characterListOrder || 100).on('change', function() {
+        charExtract.characterListOrder = parseInt($(this).val()) || 100;
         saveSettings();
     });
 }
