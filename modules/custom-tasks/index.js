@@ -121,7 +121,7 @@ export function renderTaskList() {
             const positionText = {
                 'before': '主提示前',
                 'after': '主提示后', 
-                'chat': `聊天@${task.depth || 4}`
+                'chat': `聊天@${task.depth ?? 4}`
             }[task.position] || '聊天';
             const intervalText = task.interval > 0 ? `每${task.interval}楼` : '每次';
             
@@ -225,9 +225,9 @@ function showParallelTaskEditView(task, isNew = true) {
     $('#jtw-parallel-task-name').val(task.name || '');
     $('#jtw-parallel-task-prompt').val(task.prompt || '');
     $('#jtw-parallel-task-position').val(task.position || 'chat');
-    $('#jtw-parallel-task-depth').val(task.depth || 4);
+    $('#jtw-parallel-task-depth').val(task.depth ?? 4);
     $('#jtw-parallel-task-role').val(task.role || 'system');
-    $('#jtw-parallel-task-interval').val(task.interval || 0);
+    $('#jtw-parallel-task-interval').val(task.interval ?? 0);
     
     // 显示/隐藏深度和角色输入框
     if ($('#jtw-parallel-task-position').val() === 'chat') {
@@ -558,7 +558,7 @@ async function previewTaskPrompt(index) {
             const positionText = {
                 'before': '主提示词之前',
                 'after': '主提示词之后',
-                'chat': `聊天记录 @Depth ${task.depth || 4}`
+                'chat': `聊天记录 @Depth ${task.depth ?? 4}`
             }[task.position] || '聊天记录';
             
             const intervalText = task.interval > 0 
@@ -1448,7 +1448,7 @@ export async function onChatCompletionPromptReady(eventData) {
             // 根据位置注入
             const position = task.position || 'chat';
             const role = task.role || 'system';
-            const depth = task.depth || 4;
+            const depth = task.depth ?? 4;
             
             const messageObj = { role, content: prompt };
             
