@@ -1405,24 +1405,28 @@ function handleQuickAccessAction(action) {
  * 打开扩展设置面板并切换到指定标签
  */
 function openExtensionPanel(tabId) {
-    // 1. 先打开顶部的扩展设置面板
-    const $extensionsButton = $('#extensions_button');
-    const $extensionsPanel = $('#extensions_settings2').parent();
+    // 1. 首先展开顶层的扩展列表drawer
+    const $extensionsDrawer = $('#extensions-settings-button');
+    const $extensionsContent = $('#rm_extensions_block');
     
-    // 如果扩展面板未显示，点击按钮打开
-    if (!$extensionsPanel.is(':visible')) {
-        $extensionsButton.trigger('click');
+    // 检查扩展列表是否已展开（通过检查是否有openDrawer class）
+    if (!$extensionsDrawer.hasClass('openDrawer')) {
+        // 未展开，点击drawer-toggle展开
+        $extensionsDrawer.find('.drawer-toggle').trigger('click');
     }
     
-    // 2. 延迟后展开 Project Amber 的 inline-drawer
+    // 2. 延迟后展开Project Amber的inline-drawer
     setTimeout(() => {
+        // 找到 Project Amber 的设置面板
         const $amberPanel = $('#json-to-worldbook-panel');
         const $drawer = $amberPanel.closest('.inline-drawer');
         
+        // 如果抽屉未展开，展开它
         if ($drawer.length) {
+            const $drawerContent = $drawer.find('.inline-drawer-content');
             const $drawerIcon = $drawer.find('.inline-drawer-icon');
             
-            // 检查是否已展开（down class表示未展开，up表示已展开）
+            // 检查是否已展开（通过检查icon是否有down class）
             if ($drawerIcon.hasClass('down')) {
                 // 未展开，点击展开
                 $drawer.find('.inline-drawer-toggle').trigger('click');
@@ -1433,7 +1437,7 @@ function openExtensionPanel(tabId) {
         setTimeout(() => {
             $(`.jtw-tab[data-tab="${tabId}"]`).trigger('click');
         }, 150);
-    }, 150);
+    }, 200);
 }
 
 /**
