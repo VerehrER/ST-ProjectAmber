@@ -1,0 +1,11 @@
+{
+  "id": "task_1768482545404_5aolpmt8h",
+  "type": "parallel",
+  "name": "角色状态记录",
+  "enabled": false,
+  "prompt": "【角色状态记录】\n这是特殊要求：在正文之后，在<amberEdit>标签中，记录在场角色的动作与状态信息。\n\n输出：仅纯净合法 JSON，结构参考模板。\n- 使用标准 JSON 语法：所有键名和字符串都使用半角双引号 \"\n- 文本内容中如需使用引号，请使用单引号或中文引号「」或“”，不要使用半角双引号 \"\n- title, constant, position, order为固定值，需原封不动输出\n\n模版：\n{\n  \"title\": \"角色状态信息\",\n  \"constant\": true,\n  \"position\": 1,\n  \"order\": 550,\n  \"角色名1\": {\n    \"服装\": \"当前服装\",\n    \"动作\": \"当前动作\",\n    \"位置\": \"当前位置\"\n  }\n}\n",
+  "position": "chat",
+  "depth": 4,
+  "role": "user",
+  "interval": 0
+}

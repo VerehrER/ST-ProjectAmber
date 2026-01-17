@@ -1,0 +1,25 @@
+{
+  "id": "task_1768468959394_4i6fxdcj4",
+  "type": "generate",
+  "name": "提取场景信息",
+  "promptU1": "你是TRPG局部场景生成器。\n你的任务是根据聊天历史，为目前{{user}}所在的位置生成详细的局部地图/室内场景。",
+  "promptA1": "明白。我将根据聊天历史，生成{{user}}当前所在位置的详细的局部地图/室内场景。",
+  "promptU2": "【世界设定】\n<world_info>\n{{description}}\n{{worldInfo}}\n玩家角色：{{user}}\n{{persona}}\n</world_info>\n\n【历史记录】\n<chat_history>\n{{chatHistory}}\n</chat_history>\n\n【输出要求】\n1. 根据历史记录推断{{user}}当前实际所在的具体位置（可能是某个房间、店铺、街道、洞穴等）\n2. 生成符合该地点特色的室内/局部场景描写\n3. 包含1~4个可交互的微观节点\n4. Description 必须用 **节点名** 包裹所有节点名称\n5. 每个节点的 info 要具体、生动、有画面感\n6. 1~3个该地点的名称关键词\n\n输出：仅纯净合法 JSON，结构参考模板。\n- 使用标准 JSON 语法：所有键名和字符串都使用半角双引号 \"\n- 文本内容中如需使用引号，请使用单引号或中文引号「」或“”，不要使用半角双引号 \"\n\n模版：\n[{\n\"name\": \"当前所在位置的具体名称\", \n\"description\": \"室内全景描写，包含可交互节点\",     \n\"nodes\": [\n      { \"name\": \"室内节点名\", \"info\": \"微观细节描述\" }\n    ],\n\"keys\": [\"关键词1\",\"关键词2\",\"关键词3\"]\n}]",
+  "promptA2": "OK, JSON generate start:",
+  "entryTitle": "场景信息",
+  "entryKeys": "",
+  "entryConstant": true,
+  "entryPosition": 1,
+  "entryDepth": 4,
+  "entryOrder": 600,
+  "worldbookDefaults": {
+    "entryName": "顶层核心区·云影走廊",
+    "entryKeys": "核心区,云海走廊,高空活春宫",
+    "entryConstant": false,
+    "entryPosition": 4,
+    "entryDepth": 4,
+    "entryOrder": 900
+  },
+  "historyStartLayer": null,
+  "historyEndLayer": null
+}
