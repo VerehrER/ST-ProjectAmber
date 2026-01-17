@@ -267,12 +267,9 @@ export function showModal() {
     $('#jtw-ask-amber-modal').fadeIn(200);
     switchTab('chat');
     
-    // 设置 max 默认值为当前最新楼层数
-    $('#jtw-aa-history-end').attr('placeholder', totalMessages).attr('max', totalMessages);
-    // 如果没有填写，设置为默认值
-    if (!$('#jtw-aa-history-end').val()) {
-        $('#jtw-aa-history-end').val(totalMessages);
-    }
+    // 每次打开都重置层数范围
+    $('#jtw-aa-history-start').val(''); // 开始层数清空
+    $('#jtw-aa-history-end').attr('placeholder', totalMessages).attr('max', totalMessages).val(totalMessages); // 结束层数重置为最新楼层
     
     // 清空上次的输入和结果
     // $('#jtw-aa-question').val('');
