@@ -500,7 +500,29 @@ async function previewTaskPrompt(index) {
         const messageCount = chat.length;
         
         // 获取聊天历史
-        const chatHistory = getChatHistory(settings.historyCount || 50);
+        let chatHistory;
+        if (task.type === 'generate' && task.historyStartLayer != null && task.historyStartLayer !== '') {
+            // 使用任务配置的层数范围
+            const totalMessages = chat.length;
+            let startLayer = parseInt(task.historyStartLayer);
+            let endLayer = parseInt(task.historyEndLayer) || totalMessages;
+            
+            startLayer = Math.max(1, Math.min(startLayer, totalMessages));
+            endLayer = Math.max(startLayer, Math.min(endLayer, totalMessages));
+            
+            const startIndex = startLayer - 1;
+            const endIndex = endLayer;
+            const selectedMessages = chat.slice(startIndex, endIndex);
+            
+            // 格式化消息
+            chatHistory = selectedMessages.map(msg => {
+                const name = msg.is_user ? userName : charName;
+                return `${name}: ${msg.mes}`;
+            }).join('\n\n');
+        } else {
+            // 使用全局设置
+            chatHistory = getChatHistory(settings.historyCount || 50);
+        }
         
         // 获取世界书内容
         const worldInfo = await getWorldInfoContent();
