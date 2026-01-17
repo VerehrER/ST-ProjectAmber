@@ -1128,7 +1128,7 @@ function bindModalEvents() {
         if (e.target === this) hideModal();
     });
     // 阻止弹窗内容区点击冒泡
-    $('#jtw-character-extract-modal .jtw-modal-content').off('click').on('click', function(e) {
+    $('#jtw-character-extract-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
         e.stopPropagation();
     });
     
@@ -1140,7 +1140,7 @@ function bindModalEvents() {
     $('#jtw-ce-result-modal').off('click').on('click', function(e) {
         if (e.target === this) hideResultModal();
     });
-    $('#jtw-ce-result-modal .jtw-modal-content').off('click').on('click', function(e) {
+    $('#jtw-ce-result-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
         e.stopPropagation();
     });
     
@@ -1152,7 +1152,7 @@ function bindModalEvents() {
     $('#jtw-ce-prompt-modal').off('click').on('click', function(e) {
         if (e.target === this) hidePromptModal();
     });
-    $('#jtw-ce-prompt-modal .jtw-modal-content').off('click').on('click', function(e) {
+    $('#jtw-ce-prompt-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
         e.stopPropagation();
     });
     

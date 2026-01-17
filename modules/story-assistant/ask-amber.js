@@ -771,7 +771,7 @@ function bindModalEvents() {
         if (e.target === this) hideModal();
     });
     // 阻止弹窗内容区点击冒泡
-    $('#jtw-ask-amber-modal .jtw-modal-content').off('click').on('click', function(e) {
+    $('#jtw-ask-amber-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
         e.stopPropagation();
     });
     
@@ -783,7 +783,7 @@ function bindModalEvents() {
     $('#jtw-aa-prompt-preview-modal').off('click').on('click', function(e) {
         if (e.target === this) hidePromptPreviewModal();
     });
-    $('#jtw-aa-prompt-preview-modal .jtw-modal-content').off('click').on('click', function(e) {
+    $('#jtw-aa-prompt-preview-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
         e.stopPropagation();
     });
     
@@ -795,7 +795,7 @@ function bindModalEvents() {
     $('#jtw-aa-result-modal').off('click').on('click', function(e) {
         if (e.target === this) hideResultModal();
     });
-    $('#jtw-aa-result-modal .jtw-modal-content').off('click').on('click', function(e) {
+    $('#jtw-aa-result-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
         e.stopPropagation();
     });
     
