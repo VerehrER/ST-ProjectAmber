@@ -490,7 +490,7 @@
     font-size: 13px;
     line-height: 1.6;
     color: var(--SmartThemeBodyColor);
-    max-height: 400px;
+    max-height: 600px;
     overflow-y: auto;
 }
 
