@@ -776,7 +776,7 @@ function createSettingsUI() {
 
     $('#extensions_settings2').append(settingsHtml);
     
-    // 初始化自定义任务UI和事件
+    // 初始化自定义任务模块
     CustomTasks.init({
         getSettings,
         getContext,
@@ -789,11 +789,13 @@ function createSettingsUI() {
         getAvailableWorldbooks,
         EXT_NAME
     });
+    
+    // 先渲染自定义任务面板内容（必须在事件绑定之前）
+    $('#custom-tasks').html(CustomTasks.renderCustomTasksPanel());
+    
+    // 再绑定事件和渲染任务列表
     CustomTasks.initTaskEvents(saveSettings);
     CustomTasks.renderTaskList();
-    
-    // 渲染自定义任务面板内容
-    $('#custom-tasks').html(CustomTasks.renderCustomTasksPanel());
 
     // 标签页切换
     $('.jtw-tab').on('click', function() {
