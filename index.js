@@ -196,9 +196,6 @@ function extractJson(input, isArray = false) {
 
     return null;
 }
-
-// ==================== 角色列表提取 ====================
-
 /**
  * 仅提取指定标签内的内容，删除其他所有内容
  * @param {string} text - 输入文本
@@ -350,39 +347,6 @@ function getChatHistory(count) {
 }
 
 /**
- * 构建角色提取的消息
- * @param {object} vars - 变量对象
- * @returns {Array}
- */
-function buildExtractCharactersMessages(vars) {
-    const settings = getSettings();
-    const prompts = {
-        u1: settings.promptU1,
-        a1: settings.promptA1,
-        u2: settings.promptU2,
-        a2: settings.promptA2
-    };
-    
-    const replaceVars = (template) => {
-        return template
-            .replace(/\{\{user\}\}/g, vars.userName || '{{user}}')
-            .replace(/\{\{char\}\}/g, vars.charName || '{{char}}')
-            .replace(/\{\{description\}\}/g, vars.description || '')
-            .replace(/\{\{persona\}\}/g, vars.persona || '')
-            .replace(/\{\{worldInfo\}\}/g, vars.worldInfo || '')
-            .replace(/\{\{chatHistory\}\}/g, vars.chatHistory || '')
-            .replace(/\{\{existingCharacters\}\}/g, vars.existingCharacters || '');
-    };
-    
-    return [
-        { role: 'user', content: replaceVars(prompts.u1) },
-        { role: 'assistant', content: replaceVars(prompts.a1) },
-        { role: 'user', content: replaceVars(prompts.u2) },
-        { role: 'assistant', content: replaceVars(prompts.a2) }
-    ];
-}
-
-/**
  * 调用 LLM API
  * @param {Array} messages - 消息数组
  * @returns {Promise<string>}
@@ -490,6 +454,41 @@ async function callLLMJson(messages, isArray = false) {
         console.error(`[${EXT_NAME}] LLM 调用失败:`, e);
         throw e;
     }
+}
+
+// ==================== 角色列表提取 ====================
+
+/**
+ * 构建角色提取的消息
+ * @param {object} vars - 变量对象
+ * @returns {Array}
+ */
+function buildExtractCharactersMessages(vars) {
+    const settings = getSettings();
+    const prompts = {
+        u1: settings.promptU1,
+        a1: settings.promptA1,
+        u2: settings.promptU2,
+        a2: settings.promptA2
+    };
+    
+    const replaceVars = (template) => {
+        return template
+            .replace(/\{\{user\}\}/g, vars.userName || '{{user}}')
+            .replace(/\{\{char\}\}/g, vars.charName || '{{char}}')
+            .replace(/\{\{description\}\}/g, vars.description || '')
+            .replace(/\{\{persona\}\}/g, vars.persona || '')
+            .replace(/\{\{worldInfo\}\}/g, vars.worldInfo || '')
+            .replace(/\{\{chatHistory\}\}/g, vars.chatHistory || '')
+            .replace(/\{\{existingCharacters\}\}/g, vars.existingCharacters || '');
+    };
+    
+    return [
+        { role: 'user', content: replaceVars(prompts.u1) },
+        { role: 'assistant', content: replaceVars(prompts.a1) },
+        { role: 'user', content: replaceVars(prompts.u2) },
+        { role: 'assistant', content: replaceVars(prompts.a2) }
+    ];
 }
 
 /**
