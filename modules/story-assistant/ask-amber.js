@@ -135,11 +135,7 @@ async function buildMessages(userQuestion, options = {}) {
     // 如果注入世界书
     if (options.includeWorldInfo) {
         // 根据选项决定是获取全部条目还是仅激活的条目
-        // 仅激活模式会自动刷新激活状态
-        const worldInfo = await getWorldInfoContent({ 
-            activatedOnly: options.worldInfoActivatedOnly,
-            refreshActivation: options.worldInfoActivatedOnly
-        });
+        const worldInfo = await getWorldInfoContent({ activatedOnly: options.worldInfoActivatedOnly });
         let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
         worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
         user2Parts.push(worldInfoContent);
@@ -624,9 +620,9 @@ function getModalHtml() {
                                         <label style="margin-left: 10px;">
                                             <input type="radio" name="jtw-aa-worldinfo-mode" value="activated" /> 仅激活的条目
                                         </label>
-                                        <div class="jtw-checkbox-row" id="jtw-aa-worldinfo-refresh-row" style="display: none; padding-left: 24px; margin-top: 5px;">
-                                            <input type="checkbox" id="jtw-aa-worldinfo-refresh" checked />
-                                            <label for="hint" style="padding-left: 24px;">（"仅激活"会自动刷新并基于当前聊天内容的关键词匹配结果
+                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"基于上一次生成时的关键词匹配结果）</div>
+                                    </div>
+                                </div>
                                 <div class="jtw-aa-history-row">
                                     <div class="jtw-checkbox-row">
                                         <input type="checkbox" id="jtw-aa-include-history" checked />
@@ -880,10 +876,10 @@ function bindModalEvents() {
         }
     });
     
-    // 世界书模式切换时显示/隐藏刷新选项
-    $('input[name="jtw-aa-worldinfo-mode"]').off('change').on('change', function() {
-        const isActivatedOnly = $(this).val() === 'activated';
-        if (isActivatedOnly) {
+    // 注入上下文勾选框变化时显示/隐藏层数范围
+    $('#jtw-aa-include-history').off('change').on('change', function() {
+        if ($(this).prop('checked')) {
+            $('#jtw-aa-history-range-inline').show();
         } else {
             $('#jtw-aa-history-range-inline').hide();
         }

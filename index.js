@@ -11,8 +11,7 @@ import {
     world_names, 
     world_info,
     METADATA_KEY,
-    createWorldInfoEntry,
-    getWorldInfoPrompt
+    createWorldInfoEntry
 } from "../../../world-info.js";
 import { oai_settings, getChatCompletionModel, chat_completion_sources } from "../../../openai.js";
 import { ChatCompletionService } from "../../../custom-request.js";
@@ -311,11 +310,10 @@ function removeTaggedContent(text, tagsString) {
  * 获取角色卡的世界书内容
  * @param {object} options - 选项
  * @param {boolean} options.activatedOnly - 是否仅获取被激活的条目（基于上次生成时的关键词匹配）
- * @param {boolean} options.refreshActivation - 是否在获取前刷新激活状态（触发一次干运行）
  * @returns {Promise<string>}
  */
 async function getWorldInfoContent(options = {}) {
-    const { activatedOnly = false, refreshActivation = false } = options;
+    const { activatedOnly = false } = options;
     
     try {
         const targetBook = getCharacterWorldbook();
@@ -323,23 +321,6 @@ async function getWorldInfoContent(options = {}) {
         
         const worldData = await loadWorldInfo(targetBook);
         if (!worldData?.entries) return '';
-        
-        // 如果需要刷新激活状态，主动触发一次世界书激活
-        if (activatedOnly && refreshActivation) {
-            try {
-                const ctx = getContext();
-                const chat = ctx.chat || [];
-                const maxContext = ctx.maxContext || 8192;
-                
-                console.log(`[${EXT_NAME}] 主动刷新世界书激活状态...`);
-                // 触发干运行（isDryRun = true），这会触发 WORLD_INFO_ACTIVATED 事件并更新缓存
-                await getWorldInfoPrompt(chat, maxContext, true);
-                console.log(`[${EXT_NAME}] 世界书激活状态已刷新，缓存了 ${lastActivatedWorldInfoEntries.length} 个条目`);
-            } catch (e) {
-                console.warn(`[${EXT_NAME}] 刷新世界书激活状态失败:`, e);
-                // 失败时继续使用旧缓存
-            }
-        }
         
         let activeEntries;
         
