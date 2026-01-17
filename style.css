@@ -852,6 +852,7 @@
 .jtw-aa-modal-content {
     max-width: 800px;
     width: 95%;
+    max-height: 80vh;
 }
 
 /* 问候语 */
