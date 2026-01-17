@@ -639,7 +639,7 @@ export function renderSettingsPanel() {
                                     </div>
                                     <div style="margin-bottom: 8px;">
                                         <label>User 消息 2</label>
-                                        <textarea id="jtw-ce-prompt-u2" class="jtw-input" rows="6"></textarea>
+                                        <textarea id="jtw-ce-prompt-u2" class="jtw-input" rows="9"></textarea>
                                     </div>
                                     <div style="margin-bottom: 8px;">
                                         <label>Assistant 消息 2</label>
