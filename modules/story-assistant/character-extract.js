@@ -575,7 +575,7 @@ export function renderSettingsPanel() {
                         </div>
                         <div id="jtw-ce-entry-editor" style="display: none;">
                             <div id="jtw-ce-entry-info" class="jtw-ce-entry-info"></div>
-                            <textarea id="jtw-ce-entry-content" class="jtw-ce-textarea" rows="18" placeholder="条目内容..."></textarea>
+                            <textarea id="jtw-ce-entry-content" class="jtw-ce-textarea" rows="25" placeholder="条目内容..."></textarea>
                             <div class="jtw-ce-actions">
                                 <div id="jtw-ce-entry-status" class="jtw-status" style="display: none;"></div>
                                 <button id="jtw-ce-save-entry" class="jtw-btn primary">保存修改</button>
@@ -639,7 +639,7 @@ export function renderSettingsPanel() {
                                     </div>
                                     <div style="margin-bottom: 8px;">
                                         <label>User 消息 2</label>
-                                        <textarea id="jtw-ce-prompt-u2" class="jtw-input" rows="9"></textarea>
+                                        <textarea id="jtw-ce-prompt-u2" class="jtw-input" rows="10"></textarea>
                                     </div>
                                     <div style="margin-bottom: 8px;">
                                         <label>Assistant 消息 2</label>
