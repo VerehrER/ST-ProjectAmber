@@ -307,11 +307,11 @@ function removeTaggedContent(text, tagsString) {
 /**
  * 获取角色卡的世界书内容
  * @param {object} options - 选项
- * @param {boolean} options.activatedOnly - 是否仅获取被激活的条目（基于关键词匹配）
+ * @param {boolean} options.activatedOnly - 是否仅获取被激活的条目（基于关键词匹配），默认为 true
  * @returns {Promise<string>}
  */
 async function getWorldInfoContent(options = {}) {
-    const { activatedOnly = false } = options;
+    const { activatedOnly = true } = options;
     
     try {
         const targetBook = getCharacterWorldbook();
