@@ -755,9 +755,9 @@
 
 /* 提示词预览弹窗 */
 .jtw-ce-prompt-modal-content {
-    max-width: 800px;
-    width: 90%;
-    max-height: 85vh;
+    max-width: 900px;
+    width: 100%;
+    max-height: 90vh;
 }
 
 .jtw-ce-prompt-preview {
