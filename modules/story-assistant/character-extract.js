@@ -1119,16 +1119,13 @@ function bindModalEvents() {
     const charExtract = settings.characterExtract;
     const defaultCharExtract = defaultSettings.characterExtract;
     
-    // 关闭主弹窗 - 直接绑定到元素
+    // 关闭主弹窗 - 只能通过 X 按钮关闭
     $('#jtw-character-extract-modal .jtw-ce-close-modal').off('click').on('click', function(e) {
         e.stopPropagation();
         hideModal();
     });
-    $('#jtw-character-extract-modal').off('click').on('click', function(e) {
-        if (e.target === this) hideModal();
-    });
-    // 阻止弹窗内容区点击冒泡
-    $('#jtw-character-extract-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
+    // 在整个弹窗（包括遮罩层）上阻止所有事件冒泡
+    $('#jtw-character-extract-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
         e.stopPropagation();
     });
     
@@ -1137,10 +1134,7 @@ function bindModalEvents() {
         e.stopPropagation();
         hideResultModal();
     });
-    $('#jtw-ce-result-modal').off('click').on('click', function(e) {
-        if (e.target === this) hideResultModal();
-    });
-    $('#jtw-ce-result-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
+    $('#jtw-ce-result-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
         e.stopPropagation();
     });
     
@@ -1149,10 +1143,7 @@ function bindModalEvents() {
         e.stopPropagation();
         hidePromptModal();
     });
-    $('#jtw-ce-prompt-modal').off('click').on('click', function(e) {
-        if (e.target === this) hidePromptModal();
-    });
-    $('#jtw-ce-prompt-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
+    $('#jtw-ce-prompt-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
         e.stopPropagation();
     });
     

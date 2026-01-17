@@ -762,16 +762,13 @@ function bindModalEvents() {
     const amberSettings = getAmberSettings();
     const defaults = getDefaultAmberSettings();
     
-    // 关闭主弹窗 - 直接绑定到元素
+    // 关闭主弹窗 - 只能通过 X 按钮关闭
     $('#jtw-ask-amber-modal .jtw-aa-close-modal').off('click').on('click', function(e) {
         e.stopPropagation();
         hideModal();
     });
-    $('#jtw-ask-amber-modal').off('click').on('click', function(e) {
-        if (e.target === this) hideModal();
-    });
-    // 阻止弹窗内容区点击冒泡
-    $('#jtw-ask-amber-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
+    // 在整个弹窗（包括遮罩层）上阻止所有事件冒泡
+    $('#jtw-ask-amber-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
         e.stopPropagation();
     });
     
@@ -780,10 +777,7 @@ function bindModalEvents() {
         e.stopPropagation();
         hidePromptPreviewModal();
     });
-    $('#jtw-aa-prompt-preview-modal').off('click').on('click', function(e) {
-        if (e.target === this) hidePromptPreviewModal();
-    });
-    $('#jtw-aa-prompt-preview-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
+    $('#jtw-aa-prompt-preview-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
         e.stopPropagation();
     });
     
@@ -792,10 +786,7 @@ function bindModalEvents() {
         e.stopPropagation();
         hideResultModal();
     });
-    $('#jtw-aa-result-modal').off('click').on('click', function(e) {
-        if (e.target === this) hideResultModal();
-    });
-    $('#jtw-aa-result-modal .jtw-modal-content').off('click mousedown pointerdown').on('click mousedown pointerdown', function(e) {
+    $('#jtw-aa-result-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
         e.stopPropagation();
     });
     
