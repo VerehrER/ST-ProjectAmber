@@ -805,6 +805,8 @@ function createSettingsUI() {
         loadWorldInfo,
         saveWorldInfo,
         createWorldInfoEntry,
+        extractIncludeTags,
+        removeTaggedContent,
         power_user,
         EXT_NAME
     });
