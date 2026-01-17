@@ -94,6 +94,13 @@ async function buildMessages(userQuestion, options = {}) {
     const settings = getSettings();
     const amberSettings = getAmberSettings();
     
+    // 调试日志：输出选项
+    console.log('[问问琥珀] buildMessages 选项:', {
+        includeWorldInfo: options.includeWorldInfo,
+        worldInfoActivatedOnly: options.worldInfoActivatedOnly,
+        includeChatHistory: options.includeChatHistory
+    });
+    
     // 检查用户问题是否为空，防止误操作
     if (!userQuestion || !userQuestion.trim()) {
         throw new Error('请输入您的问题');
@@ -135,7 +142,10 @@ async function buildMessages(userQuestion, options = {}) {
     // 如果注入世界书
     if (options.includeWorldInfo) {
         // 根据选项决定是获取全部条目还是仅激活的条目
+        console.log('[问问琥珀] 调用 getWorldInfoContent，activatedOnly:', options.worldInfoActivatedOnly);
         const worldInfo = await getWorldInfoContent({ activatedOnly: options.worldInfoActivatedOnly });
+        console.log('[问问琥珀] 获取到的世界书内容长度:', worldInfo.length, '字符');
+        console.log('[问问琥珀] 世界书内容预览:', worldInfo.substring(0, 200));
         let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
         worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
         user2Parts.push(worldInfoContent);
@@ -301,6 +311,14 @@ async function showPromptPreviewModal() {
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
+    
+    console.log('[问问琥珀] 预览弹窗选项:', {
+        includeWorldInfo,
+        worldInfoActivatedOnly,
+        includeChatHistory,
+        historyStartLayer,
+        historyEndLayer
+    });
     
     const $container = $('#jtw-aa-prompt-preview-content');
     $container.html('<div class="jtw-ce-loading">加载中...</div>');

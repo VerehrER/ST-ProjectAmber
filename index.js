@@ -315,9 +315,17 @@ function removeTaggedContent(text, tagsString) {
 async function getWorldInfoContent(options = {}) {
     const { activatedOnly = false } = options;
     
+    console.log(`[${EXT_NAME}] getWorldInfoContent 调用，activatedOnly:`, activatedOnly);
+    console.log(`[${EXT_NAME}] 缓存的激活条目数量:`, lastActivatedWorldInfoEntries.length);
+    
     try {
         const targetBook = getCharacterWorldbook();
-        if (!targetBook) return '';
+        if (!targetBook) {
+            console.log(`[${EXT_NAME}] 没有目标世界书`);
+            return '';
+        }
+        
+        console.log(`[${EXT_NAME}] 目标世界书:`, targetBook);
         
         const worldData = await loadWorldInfo(targetBook);
         if (!worldData?.entries) return '';
@@ -333,6 +341,8 @@ async function getWorldInfoContent(options = {}) {
                     .map(e => e.uid)
             );
             
+            console.log(`[${EXT_NAME}] 从缓存中筛选出 ${activatedUids.size} 个属于目标世界书的激活条目`);
+            
             if (activatedUids.size === 0) {
                 // 如果没有匹配的激活条目，回退到 constant 条目
                 console.log(`[${EXT_NAME}] 没有匹配的激活条目，仅返回 constant 条目`);
@@ -346,13 +356,16 @@ async function getWorldInfoContent(options = {}) {
                 activeEntries = entriesArray.filter(e => 
                     e && !e.disable && e.content && activatedUids.has(e.uid)
                 );
+                console.log(`[${EXT_NAME}] 成功匹配 ${activeEntries.length} 个激活条目`);
             }
         } else {
             // 获取所有启用的条目（原有逻辑）
+            console.log(`[${EXT_NAME}] 获取所有启用的条目（activatedOnly=${activatedOnly}, 缓存=${lastActivatedWorldInfoEntries.length}）`);
             const entriesArray = Object.values(worldData.entries);
             activeEntries = entriesArray.filter(e => 
                 e && !e.disable && e.content
             );
+            console.log(`[${EXT_NAME}] 找到 ${activeEntries.length} 个启用的条目`);
         }
         
         if (activeEntries.length === 0) return '';
@@ -366,6 +379,8 @@ async function getWorldInfoContent(options = {}) {
             const title = e.comment || keys || '未命名条目';
             return `[${title}]\n${e.content}`;
         });
+        
+        console.log(`[${EXT_NAME}] 最终返回 ${activeEntries.length} 个条目，总字符数: ${lines.join('\\n\\n').length}`);
         
         return '\n\n' + lines.join('\n\n');
     } catch (e) {
