@@ -1218,10 +1218,17 @@ function bindQuickAccessEvents() {
         const clientY = e.type.includes('touch') ? e.originalEvent.touches[0].clientY : e.clientY;
         startY = clientY;
         
-        // 获取当前位置
+        // 获取当前位置 - 先将元素转换为 top 定位
         const rect = $panel[0].getBoundingClientRect();
         const containerRect = $panel.parent()[0].getBoundingClientRect();
         startTop = rect.top - containerRect.top;
+        
+        // 立即设置为 top 定位，避免后续计算偏差
+        $panel.css({
+            top: startTop + 'px',
+            bottom: 'auto',
+            transform: 'none'
+        });
         
         $panel.addClass('dragging');
         e.preventDefault();
