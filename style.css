@@ -1008,14 +1008,15 @@
 
 .jtw-quick-access {
     position: fixed;
-    right: 20px;
+    right: 15px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 9999;
+    z-index: 99999;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
+    pointer-events: auto;
 }
 
 /* 主切换按钮 */
@@ -1032,6 +1033,7 @@
     box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
     transition: all 0.3s ease;
     font-size: 20px;
+    border: none;
 }
 
 .jtw-quick-access-toggle:hover {
@@ -1052,12 +1054,14 @@
     visibility: hidden;
     transform: translateX(20px);
     transition: all 0.3s ease;
+    pointer-events: none;
 }
 
 .jtw-quick-access.expanded .jtw-quick-access-menu {
     opacity: 1;
     visibility: visible;
     transform: translateX(0);
+    pointer-events: auto;
 }
 
 /* 菜单项 */
@@ -1066,8 +1070,8 @@
     align-items: center;
     gap: 10px;
     padding: 10px 16px;
-    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.7));
-    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.1));
+    background: var(--SmartThemeBlurTintColor, rgba(0, 0, 0, 0.85));
+    border: 1px solid var(--SmartThemeBorderColor, rgba(255, 255, 255, 0.15));
     border-radius: 24px;
     cursor: pointer;
     white-space: nowrap;
@@ -1095,23 +1099,23 @@
 }
 
 /* 移动端适配 */
-@media (max-width: 768px) {
+@media (max-width: 1000px) {
     .jtw-quick-access {
-        right: 10px;
-        bottom: 80px;
+        right: 8px;
+        bottom: 100px;
         top: auto;
         transform: none;
     }
     
     .jtw-quick-access-toggle {
-        width: 44px;
-        height: 44px;
+        width: 42px;
+        height: 42px;
         font-size: 18px;
     }
     
     .jtw-quick-access-menu {
         position: absolute;
-        bottom: 55px;
+        bottom: 52px;
         right: 0;
         transform: translateY(10px);
     }
@@ -1127,5 +1131,34 @@
     
     .jtw-quick-access-item:hover {
         transform: translateX(0) scale(1.02);
+    }
+}
+
+/* 超小屏幕适配 */
+@media (max-width: 500px) {
+    .jtw-quick-access {
+        right: 5px;
+        bottom: 90px;
+    }
+    
+    .jtw-quick-access-toggle {
+        width: 38px;
+        height: 38px;
+        font-size: 16px;
+    }
+    
+    .jtw-quick-access-menu {
+        bottom: 48px;
+    }
+    
+    .jtw-quick-access-item {
+        padding: 7px 12px;
+        font-size: 12px;
+        gap: 8px;
+    }
+    
+    .jtw-quick-access-item i {
+        width: 18px;
+        font-size: 14px;
     }
 }

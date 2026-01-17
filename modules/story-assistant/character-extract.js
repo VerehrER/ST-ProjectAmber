@@ -634,6 +634,9 @@ async function runExtraction(showStatus) {
  * 显示主弹窗
  */
 export function showModal() {
+    // 如果 DOM 不存在，先创建
+    ensureModalExists();
+    
     $('#jtw-character-extract-modal').fadeIn(200);
     // 默认显示第一个标签页
     switchTab('entry');
@@ -936,16 +939,14 @@ async function runAndShowResult() {
     setTimeout(() => $status.fadeOut(), 5000);
 }
 
+// 标记事件是否已绑定
+let eventsInitialized = false;
+
 /**
- * 渲染设置面板 HTML（仅用于故事助手列表显示，实际功能在弹窗中）
- * @returns {string}
+ * 获取模态框 HTML
  */
-export function renderSettingsPanel() {
+function getModalHtml() {
     return `
-        <div class="jtw-assistant-feature-content" id="jtw-character-extract-settings" style="display: none;">
-            <!-- 这里不再需要内容，点击后直接打开弹窗 -->
-        </div>
-        
         <!-- 角色提取主弹窗 -->
         <div id="jtw-character-extract-modal" class="jtw-modal" style="display: none;">
             <div class="jtw-modal-content jtw-ce-modal-content">
@@ -1092,11 +1093,22 @@ export function renderSettingsPanel() {
 }
 
 /**
- * 初始化设置面板事件绑定
- * @param {function} saveSettings - 保存设置回调
+ * 确保模态框 DOM 存在
  */
-export function initSettingsEvents(saveSettings) {
-    saveSettingsCallback = saveSettings;
+function ensureModalExists() {
+    if ($('#jtw-character-extract-modal').length === 0) {
+        $('body').append(getModalHtml());
+        // 绑定事件
+        if (!eventsInitialized) {
+            bindModalEvents();
+        }
+    }
+}
+
+/**
+ * 绑定模态框事件
+ */
+function bindModalEvents() {
     const { getSettings, defaultSettings } = dependencies;
     const settings = getSettings();
     
@@ -1105,110 +1117,128 @@ export function initSettingsEvents(saveSettings) {
         settings.characterExtract = { ...defaultSettings.characterExtract };
     }
     const charExtract = settings.characterExtract;
+    const defaultCharExtract = defaultSettings.characterExtract;
     
     // 关闭主弹窗
-    $('.jtw-ce-close-modal').on('click', hideModal);
-    $('#jtw-character-extract-modal').on('click', function(e) {
+    $(document).off('click.jtw-ce-close-modal').on('click.jtw-ce-close-modal', '.jtw-ce-close-modal', hideModal);
+    $('#jtw-character-extract-modal').off('click.jtw-ce-bg').on('click.jtw-ce-bg', function(e) {
         if (e.target === this) hideModal();
     });
     
     // 关闭结果弹窗
-    $('.jtw-ce-close-result').on('click', hideResultModal);
-    $('#jtw-ce-result-modal').on('click', function(e) {
+    $(document).off('click.jtw-ce-close-result').on('click.jtw-ce-close-result', '.jtw-ce-close-result', hideResultModal);
+    $('#jtw-ce-result-modal').off('click.jtw-ce-result-bg').on('click.jtw-ce-result-bg', function(e) {
         if (e.target === this) hideResultModal();
     });
     
     // 关闭提示词预览弹窗
-    $('.jtw-ce-close-prompt').on('click', hidePromptModal);
-    $('#jtw-ce-prompt-modal').on('click', function(e) {
+    $(document).off('click.jtw-ce-close-prompt').on('click.jtw-ce-close-prompt', '.jtw-ce-close-prompt', hidePromptModal);
+    $('#jtw-ce-prompt-modal').off('click.jtw-ce-prompt-bg').on('click.jtw-ce-prompt-bg', function(e) {
         if (e.target === this) hidePromptModal();
     });
     
     // 标签页切换
-    $('.jtw-ce-tab').on('click', function() {
+    $(document).off('click.jtw-ce-tab').on('click.jtw-ce-tab', '.jtw-ce-tab', function() {
         const tab = $(this).data('tab');
         switchTab(tab);
-        if (tab === 'settings') {
-            // 切换到设置页时不自动加载预览，等用户点击刷新
-        }
     });
     
     // 前往设置按钮
-    $('.jtw-ce-goto-settings').on('click', function() {
+    $(document).off('click.jtw-ce-goto-settings').on('click.jtw-ce-goto-settings', '.jtw-ce-goto-settings', function() {
         switchTab('settings');
     });
     
     // 保存条目编辑
-    $('#jtw-ce-save-entry').on('click', saveEntryEdit);
+    $('#jtw-ce-save-entry').off('click').on('click', saveEntryEdit);
     
     // 预览提示词弹窗
-    $('#jtw-ce-preview-prompt').on('click', showPromptModal);
+    $('#jtw-ce-preview-prompt').off('click').on('click', showPromptModal);
     
     // 运行提取
-    $('#jtw-ce-run-extract').on('click', runAndShowResult);
+    $('#jtw-ce-run-extract').off('click').on('click', runAndShowResult);
     
     // 保存提取结果
-    $('#jtw-ce-result-save').on('click', saveExtractionResult);
+    $('#jtw-ce-result-save').off('click').on('click', saveExtractionResult);
     
     // 条目名称
-    $('#jtw-ce-entry-name').val(charExtract.characterListName || '出场角色列表').on('change', function() {
+    $('#jtw-ce-entry-name').val(charExtract.characterListName || '出场角色列表').off('change').on('change', function() {
         charExtract.characterListName = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
     // 历史消息数量
-    $('#jtw-ce-history-count').val(charExtract.historyCount || 50).on('change', function() {
+    $('#jtw-ce-history-count').val(charExtract.historyCount || 50).off('change').on('change', function() {
         charExtract.historyCount = parseInt($(this).val()) || 50;
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
     // 提示词设置
-    const defaultCharExtract = defaultSettings.characterExtract;
-    
-    $('#jtw-ce-prompt-u1').val(charExtract.promptU1 || defaultCharExtract.promptU1).on('change', function() {
+    $('#jtw-ce-prompt-u1').val(charExtract.promptU1 || defaultCharExtract.promptU1).off('change').on('change', function() {
         charExtract.promptU1 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-ce-prompt-a1').val(charExtract.promptA1 || defaultCharExtract.promptA1).on('change', function() {
+    $('#jtw-ce-prompt-a1').val(charExtract.promptA1 || defaultCharExtract.promptA1).off('change').on('change', function() {
         charExtract.promptA1 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-ce-prompt-u2').val(charExtract.promptU2 || defaultCharExtract.promptU2).on('change', function() {
+    $('#jtw-ce-prompt-u2').val(charExtract.promptU2 || defaultCharExtract.promptU2).off('change').on('change', function() {
         charExtract.promptU2 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-ce-prompt-a2').val(charExtract.promptA2 || defaultCharExtract.promptA2).on('change', function() {
+    $('#jtw-ce-prompt-a2').val(charExtract.promptA2 || defaultCharExtract.promptA2).off('change').on('change', function() {
         charExtract.promptA2 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
     // 条目位置
-    $('#jtw-ce-position').val(charExtract.characterListPosition || 0).on('change', function() {
+    $('#jtw-ce-position').val(charExtract.characterListPosition || 0).off('change').on('change', function() {
         charExtract.characterListPosition = parseInt($(this).val());
         if (charExtract.characterListPosition === 4) {
             $('#jtw-ce-depth-container').show();
         } else {
             $('#jtw-ce-depth-container').hide();
         }
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
     if (charExtract.characterListPosition === 4) {
         $('#jtw-ce-depth-container').show();
     }
     
-    $('#jtw-ce-depth').val(charExtract.characterListDepth || 4).on('change', function() {
+    $('#jtw-ce-depth').val(charExtract.characterListDepth || 4).off('change').on('change', function() {
         charExtract.characterListDepth = parseInt($(this).val()) || 4;
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-ce-order').val(charExtract.characterListOrder || 100).on('change', function() {
+    $('#jtw-ce-order').val(charExtract.characterListOrder || 100).off('change').on('change', function() {
         charExtract.characterListOrder = parseInt($(this).val()) || 100;
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
+    
+    eventsInitialized = true;
+}
+
+/**
+ * 渲染设置面板 HTML（简化版，模态框在 showModal 时动态创建）
+ * @returns {string}
+ */
+export function renderSettingsPanel() {
+    return `
+        <div class="jtw-assistant-feature-content" id="jtw-character-extract-settings" style="display: none;">
+            <!-- 占位，实际功能在弹窗中 -->
+        </div>
+    `;
+}
+
+/**
+ * 初始化设置面板事件绑定（设置保存回调）
+ * @param {function} saveSettings - 保存设置回调
+ */
+export function initSettingsEvents(saveSettings) {
+    saveSettingsCallback = saveSettings;
 }
 
 /**

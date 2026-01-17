@@ -251,6 +251,9 @@ async function askAmber(userQuestion, options = {}) {
  * 显示主弹窗
  */
 export function showModal() {
+    // 如果 DOM 不存在，先创建
+    ensureModalExists();
+    
     const { getContext } = dependencies;
     const ctx = getContext();
     const chat = ctx.chat || [];
@@ -563,15 +566,14 @@ function showResultStatus(message, isError = false) {
     setTimeout(() => $status.fadeOut(), 5000);
 }
 
+// 标记事件是否已绑定
+let eventsInitialized = false;
+
 /**
- * 渲染设置面板 HTML
+ * 获取模态框 HTML（不包含设置占位）
  */
-export function renderSettingsPanel() {
+function getModalHtml() {
     return `
-        <div class="jtw-assistant-feature-content" id="jtw-ask-amber-settings" style="display: none;">
-            <!-- 占位，实际功能在弹窗中 -->
-        </div>
-        
         <!-- 问问琥珀主弹窗 -->
         <div id="jtw-ask-amber-modal" class="jtw-modal" style="display: none;">
             <div class="jtw-modal-content jtw-aa-modal-content">
@@ -741,52 +743,63 @@ export function renderSettingsPanel() {
 }
 
 /**
- * 初始化事件绑定
+ * 确保模态框 DOM 存在
  */
-export function initSettingsEvents(saveSettings) {
-    saveSettingsCallback = saveSettings;
-    
+function ensureModalExists() {
+    if ($('#jtw-ask-amber-modal').length === 0) {
+        $('body').append(getModalHtml());
+        // 绑定事件
+        if (!eventsInitialized) {
+            bindModalEvents();
+        }
+    }
+}
+
+/**
+ * 绑定模态框事件（与 initSettingsEvents 分开，只负责弹窗本身的事件）
+ */
+function bindModalEvents() {
     const amberSettings = getAmberSettings();
     const defaults = getDefaultAmberSettings();
     
     // 关闭主弹窗
-    $('.jtw-aa-close-modal').on('click', hideModal);
-    $('#jtw-ask-amber-modal').on('click', function(e) {
+    $(document).off('click.jtw-aa-close-modal').on('click.jtw-aa-close-modal', '.jtw-aa-close-modal', hideModal);
+    $('#jtw-ask-amber-modal').off('click.jtw-aa-bg').on('click.jtw-aa-bg', function(e) {
         if (e.target === this) hideModal();
     });
     
     // 关闭提示词预览弹窗
-    $('.jtw-aa-close-preview').on('click', hidePromptPreviewModal);
-    $('#jtw-aa-prompt-preview-modal').on('click', function(e) {
+    $(document).off('click.jtw-aa-close-preview').on('click.jtw-aa-close-preview', '.jtw-aa-close-preview', hidePromptPreviewModal);
+    $('#jtw-aa-prompt-preview-modal').off('click.jtw-aa-preview-bg').on('click.jtw-aa-preview-bg', function(e) {
         if (e.target === this) hidePromptPreviewModal();
     });
     
     // 关闭结果弹窗
-    $('.jtw-aa-close-result').on('click', hideResultModal);
-    $('#jtw-aa-result-modal').on('click', function(e) {
+    $(document).off('click.jtw-aa-close-result').on('click.jtw-aa-close-result', '.jtw-aa-close-result', hideResultModal);
+    $('#jtw-aa-result-modal').off('click.jtw-aa-result-bg').on('click.jtw-aa-result-bg', function(e) {
         if (e.target === this) hideResultModal();
     });
     
     // 标签页切换
-    $('.jtw-aa-tab').on('click', function() {
+    $(document).off('click.jtw-aa-tab').on('click.jtw-aa-tab', '.jtw-aa-tab', function() {
         const tab = $(this).data('tab');
         switchTab(tab);
     });
     
     // 运行询问
-    $('#jtw-aa-run').on('click', runAsk);
+    $('#jtw-aa-run').off('click').on('click', runAsk);
     
     // 预览提示词
-    $('#jtw-aa-preview-prompt').on('click', showPromptPreviewModal);
+    $('#jtw-aa-preview-prompt').off('click').on('click', showPromptPreviewModal);
     
     // 复制结果
-    $('#jtw-aa-result-copy').on('click', copyResult);
+    $('#jtw-aa-result-copy').off('click').on('click', copyResult);
     
     // 保存到世界书
-    $('#jtw-aa-result-save-wb').on('click', saveResultToWorldbook);
+    $('#jtw-aa-result-save-wb').off('click').on('click', saveResultToWorldbook);
     
     // 结果弹窗位置变化时显示/隐藏深度
-    $('#jtw-aa-result-entry-position').on('change', function() {
+    $('#jtw-aa-result-entry-position').off('change').on('change', function() {
         if (parseInt($(this).val()) === 4) {
             $('#jtw-aa-result-depth-container').show();
         } else {
@@ -794,34 +807,41 @@ export function initSettingsEvents(saveSettings) {
         }
     });
     
-    // 设置页面字段初始化和保存
-    $('#jtw-aa-prompt-u1').val(amberSettings.promptU1 || defaults.promptU1).on('change', function() {
+    // 设置页面字段初始化
+    $('#jtw-aa-prompt-u1').val(amberSettings.promptU1 || defaults.promptU1);
+    $('#jtw-aa-prompt-a1').val(amberSettings.promptA1 || defaults.promptA1);
+    $('#jtw-aa-worldinfo-template').val(amberSettings.worldInfoTemplate || defaults.worldInfoTemplate);
+    $('#jtw-aa-history-template').val(amberSettings.chatHistoryTemplate || defaults.chatHistoryTemplate);
+    $('#jtw-aa-prompt-a2').val(amberSettings.promptA2 || '');
+    
+    // 设置变更保存
+    $('#jtw-aa-prompt-u1').off('change').on('change', function() {
         amberSettings.promptU1 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-aa-prompt-a1').val(amberSettings.promptA1 || defaults.promptA1).on('change', function() {
+    $('#jtw-aa-prompt-a1').off('change').on('change', function() {
         amberSettings.promptA1 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-aa-worldinfo-template').val(amberSettings.worldInfoTemplate || defaults.worldInfoTemplate).on('change', function() {
+    $('#jtw-aa-worldinfo-template').off('change').on('change', function() {
         amberSettings.worldInfoTemplate = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-aa-history-template').val(amberSettings.chatHistoryTemplate || defaults.chatHistoryTemplate).on('change', function() {
+    $('#jtw-aa-history-template').off('change').on('change', function() {
         amberSettings.chatHistoryTemplate = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
-    $('#jtw-aa-prompt-a2').val(amberSettings.promptA2 || '').on('change', function() {
+    $('#jtw-aa-prompt-a2').off('change').on('change', function() {
         amberSettings.promptA2 = $(this).val();
-        saveSettings();
+        if (saveSettingsCallback) saveSettingsCallback();
     });
     
     // 注入上下文勾选框变化时显示/隐藏层数范围
-    $('#jtw-aa-include-history').on('change', function() {
+    $('#jtw-aa-include-history').off('change').on('change', function() {
         if ($(this).prop('checked')) {
             $('#jtw-aa-history-range-inline').show();
         } else {
@@ -829,12 +849,25 @@ export function initSettingsEvents(saveSettings) {
         }
     });
     
-    // 初始化显示状态
-    if ($('#jtw-aa-include-history').prop('checked')) {
-        $('#jtw-aa-history-range-inline').show();
-    } else {
-        $('#jtw-aa-history-range-inline').hide();
-    }
+    eventsInitialized = true;
+}
+
+/**
+ * 渲染设置面板 HTML（简化版，模态框在 showModal 时动态创建）
+ */
+export function renderSettingsPanel() {
+    return `
+        <div class="jtw-assistant-feature-content" id="jtw-ask-amber-settings" style="display: none;">
+            <!-- 占位，实际功能在弹窗中 -->
+        </div>
+    `;
+}
+
+/**
+ * 初始化事件绑定（设置保存回调）
+ */
+export function initSettingsEvents(saveSettings) {
+    saveSettingsCallback = saveSettings;
 }
 
 /**
