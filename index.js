@@ -1181,22 +1181,38 @@ function bindQuickAccessEvents() {
     let startTop = 0;
     let dragStartTime = 0;
     
-    // 获取可视区域的边界（使用窗口高度而不是容器高度）
+    // 获取可视区域的边界
     const getVisibleBounds = () => {
         const $parent = $panel.parent();
-        const parentOffset = $parent.offset();
-        const parentScrollTop = $parent.scrollTop() || 0;
+        const parentRect = $parent[0].getBoundingClientRect();
         const windowHeight = $(window).height();
+        const panelHeight = $panel.outerHeight() || 40;
         
-        // 计算父容器在屏幕中的可见部分
-        const parentTop = parentOffset ? parentOffset.top : 0;
-        const visibleTop = Math.max(0, -parentTop + parentScrollTop);
-        const visibleBottom = Math.min($parent.height(), windowHeight - parentTop + parentScrollTop);
+        // 计算父容器在屏幕中可见的区域（转换为相对于父容器的 offsetTop 坐标）
+        let minTop = 10; // 默认距离父容器顶部 10px
+        let maxTop = $parent.height() - panelHeight - 10; // 默认距离父容器底部 10px
         
-        return {
-            minTop: visibleTop + 10,
-            maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
-        };
+        // 如果父容器顶部在屏幕上方（被裁剪），需要调整最小位置
+        if (parentRect.top < 0) {
+            // 父容器顶部不可见，图标最小位置应该在屏幕顶部往下 10px
+            minTop = Math.abs(parentRect.top) + 10;
+        }
+        
+        // 如果父容器底部在屏幕下方（被裁剪），需要调整最大位置
+        if (parentRect.bottom > windowHeight) {
+            // 父容器底部不可见，图标最大位置应该在屏幕底部往上 panelHeight + 10px
+            maxTop = windowHeight - parentRect.top - panelHeight - 10;
+        } else {
+            // 父容器完全在屏幕内，使用父容器的实际高度
+            maxTop = parentRect.height - panelHeight - 10;
+        }
+        
+        // 确保 maxTop 不小于 minTop
+        if (maxTop < minTop) {
+            maxTop = minTop;
+        }
+        
+        return { minTop, maxTop };
     };
 
     // 限制位置在可视范围内
