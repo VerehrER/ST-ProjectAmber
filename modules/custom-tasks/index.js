@@ -724,7 +724,7 @@ function hideTaskResultModal() {
  * 保存任务结果到世界书
  */
 async function saveTaskResult() {
-    const { getSettings, getCharacterWorldbook, loadWorldInfo, saveWorldInfo, jsonToYaml, saveJsonToWorldbook } = dependencies;
+    const { getSettings, getCharacterWorldbook, loadWorldInfo, saveWorldInfo, jsonToYaml, saveJsonToWorldbook, createWorldInfoEntry } = dependencies;
     
     const $modal = $('#jtw-task-result-modal');
     const result = $modal.data('result');
@@ -784,7 +784,6 @@ async function saveTaskResult() {
             }
             
             if (!entry) {
-                const { createWorldInfoEntry } = await import("../../../../world-info.js");
                 entry = createWorldInfoEntry(targetBook, worldData);
             }
             

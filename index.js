@@ -10,7 +10,8 @@ import {
     saveWorldInfo, 
     world_names, 
     world_info,
-    METADATA_KEY 
+    METADATA_KEY,
+    createWorldInfoEntry
 } from "../../../world-info.js";
 import { oai_settings, getChatCompletionModel, chat_completion_sources } from "../../../openai.js";
 import { ChatCompletionService } from "../../../custom-request.js";
@@ -790,6 +791,7 @@ function createSettingsUI() {
         jsonToYaml,
         loadWorldInfo,
         saveWorldInfo,
+        createWorldInfoEntry,
         power_user,
         EXT_NAME
     });
