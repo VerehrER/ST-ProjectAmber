@@ -27,6 +27,9 @@ import * as CustomTasks from "./modules/custom-tasks/index.js";
 const EXT_NAME = "Project Amber";
 const EXT_ID = "JsonToWorldbook";
 
+// 缓存最后一次被 SillyTavern 激活的世界书条目
+let lastActivatedWorldInfoEntries = [];
+
 // 默认设置
 const defaultSettings = {
     enabled: true,
@@ -305,9 +308,13 @@ function removeTaggedContent(text, tagsString) {
 
 /**
  * 获取角色卡的世界书内容
+ * @param {object} options - 选项
+ * @param {boolean} options.activatedOnly - 是否仅获取被激活的条目（基于上次生成时的关键词匹配）
  * @returns {Promise<string>}
  */
-async function getWorldInfoContent() {
+async function getWorldInfoContent(options = {}) {
+    const { activatedOnly = false } = options;
+    
     try {
         const targetBook = getCharacterWorldbook();
         if (!targetBook) return '';
@@ -315,11 +322,38 @@ async function getWorldInfoContent() {
         const worldData = await loadWorldInfo(targetBook);
         if (!worldData?.entries) return '';
         
-        // 获取所有启用的条目
-        const entriesArray = Object.values(worldData.entries);
-        const activeEntries = entriesArray.filter(e => 
-            e && !e.disable && e.content
-        );
+        let activeEntries;
+        
+        if (activatedOnly && lastActivatedWorldInfoEntries.length > 0) {
+            // 使用缓存的激活条目，但需要匹配当前目标世界书
+            // 激活条目中有 world 属性，筛选出属于目标世界书的条目
+            const activatedUids = new Set(
+                lastActivatedWorldInfoEntries
+                    .filter(e => e.world === targetBook)
+                    .map(e => e.uid)
+            );
+            
+            if (activatedUids.size === 0) {
+                // 如果没有匹配的激活条目，回退到 constant 条目
+                console.log(`[${EXT_NAME}] 没有匹配的激活条目，仅返回 constant 条目`);
+                const entriesArray = Object.values(worldData.entries);
+                activeEntries = entriesArray.filter(e => 
+                    e && !e.disable && e.content && e.constant
+                );
+            } else {
+                // 从世界书数据中获取这些条目
+                const entriesArray = Object.values(worldData.entries);
+                activeEntries = entriesArray.filter(e => 
+                    e && !e.disable && e.content && activatedUids.has(e.uid)
+                );
+            }
+        } else {
+            // 获取所有启用的条目（原有逻辑）
+            const entriesArray = Object.values(worldData.entries);
+            activeEntries = entriesArray.filter(e => 
+                e && !e.disable && e.content
+            );
+        }
         
         if (activeEntries.length === 0) return '';
         
@@ -338,6 +372,14 @@ async function getWorldInfoContent() {
         console.error(`[${EXT_NAME}] 获取世界书内容失败:`, e);
         return '';
     }
+}
+
+/**
+ * 获取缓存的激活世界书条目
+ * @returns {Array}
+ */
+function getLastActivatedWorldInfoEntries() {
+    return lastActivatedWorldInfoEntries;
 }
 
 /**
@@ -976,6 +1018,7 @@ function initStoryAssistantModule() {
         world_names,
         getChatHistory,
         getWorldInfoContent,
+        getLastActivatedWorldInfoEntries,
         extractIncludeTags,
         removeTaggedContent,
         callLLM,
@@ -1489,6 +1532,14 @@ jQuery(async () => {
     
     // 监听提示词准备事件，用于并行任务注入
     eventSource.on(event_types.CHAT_COMPLETION_PROMPT_READY, CustomTasks.onChatCompletionPromptReady);
+    
+    // 监听世界书激活事件，缓存被激活的条目
+    eventSource.on(event_types.WORLD_INFO_ACTIVATED, (entries) => {
+        if (Array.isArray(entries)) {
+            lastActivatedWorldInfoEntries = entries;
+            console.log(`[${EXT_NAME}] 缓存了 ${entries.length} 个激活的世界书条目`);
+        }
+    });
 
     console.log(`[${EXT_NAME}] 初始化完成`);
 });

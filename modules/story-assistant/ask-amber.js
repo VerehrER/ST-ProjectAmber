@@ -134,7 +134,8 @@ async function buildMessages(userQuestion, options = {}) {
     
     // 如果注入世界书
     if (options.includeWorldInfo) {
-        const worldInfo = await getWorldInfoContent();
+        // 根据选项决定是获取全部条目还是仅激活的条目
+        const worldInfo = await getWorldInfoContent({ activatedOnly: options.worldInfoActivatedOnly });
         let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
         worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
         user2Parts.push(worldInfoContent);
@@ -296,6 +297,7 @@ function switchTab(tabName) {
 async function showPromptPreviewModal() {
     const question = $('#jtw-aa-question').val().trim() || '（请输入您的问题）';
     const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
+    const worldInfoActivatedOnly = $('input[name="jtw-aa-worldinfo-mode"]:checked').val() === 'activated';
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
@@ -307,6 +309,7 @@ async function showPromptPreviewModal() {
     try {
         const messages = await getPromptPreview(question, {
             includeWorldInfo,
+            worldInfoActivatedOnly,
             includeChatHistory,
             historyStartLayer,
             historyEndLayer
@@ -350,6 +353,7 @@ async function runAsk() {
     }
     
     const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
+    const worldInfoActivatedOnly = $('input[name="jtw-aa-worldinfo-mode"]:checked').val() === 'activated';
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
@@ -363,6 +367,7 @@ async function runAsk() {
     try {
         const response = await askAmber(question, {
             includeWorldInfo,
+            worldInfoActivatedOnly,
             includeChatHistory,
             historyStartLayer,
             historyEndLayer
@@ -603,9 +608,20 @@ function getModalHtml() {
                         <div class="jtw-section">
                             <h4>注入选项</h4>
                             <div class="jtw-aa-options">
-                                <div class="jtw-checkbox-row">
-                                    <input type="checkbox" id="jtw-aa-include-worldinfo" checked />
-                                    <label for="jtw-aa-include-worldinfo">注入世界书内容</label>
+                                <div class="jtw-aa-worldinfo-row">
+                                    <div class="jtw-checkbox-row">
+                                        <input type="checkbox" id="jtw-aa-include-worldinfo" checked />
+                                        <label for="jtw-aa-include-worldinfo">注入世界书内容</label>
+                                    </div>
+                                    <div class="jtw-aa-worldinfo-mode" id="jtw-aa-worldinfo-mode">
+                                        <label style="margin-left: 24px;">
+                                            <input type="radio" name="jtw-aa-worldinfo-mode" value="all" checked /> 全部条目
+                                        </label>
+                                        <label style="margin-left: 10px;">
+                                            <input type="radio" name="jtw-aa-worldinfo-mode" value="activated" /> 仅激活的条目
+                                        </label>
+                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"基于上一次生成时的关键词匹配结果）</div>
+                                    </div>
                                 </div>
                                 <div class="jtw-aa-history-row">
                                     <div class="jtw-checkbox-row">
@@ -849,6 +865,15 @@ function bindModalEvents() {
     $('#jtw-aa-prompt-a2').off('change').on('change', function() {
         amberSettings.promptA2 = $(this).val();
         if (saveSettingsCallback) saveSettingsCallback();
+    });
+    
+    // 注入世界书勾选框变化时显示/隐藏模式选项
+    $('#jtw-aa-include-worldinfo').off('change').on('change', function() {
+        if ($(this).prop('checked')) {
+            $('#jtw-aa-worldinfo-mode').show();
+        } else {
+            $('#jtw-aa-worldinfo-mode').hide();
+        }
     });
     
     // 注入上下文勾选框变化时显示/隐藏层数范围
