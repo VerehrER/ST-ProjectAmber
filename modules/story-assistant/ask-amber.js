@@ -585,7 +585,6 @@ export function renderSettingsPanel() {
                     <!-- 互动页 -->
                     <div class="jtw-aa-tab-content active" id="jtw-aa-tab-chat">
                         <div class="jtw-aa-greeting">
-                            <div class="jtw-aa-greeting-avatar">✨</div>
                             <div class="jtw-aa-greeting-text">主人您好，我是琥珀，请问有什么需要帮助的吗？</div>
                         </div>
                         
