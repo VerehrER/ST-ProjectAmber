@@ -43,7 +43,7 @@ function escapeHtml(text) {
 function getDefaultAmberSettings() {
     return {
         // 提示词设置
-        promptU1: '你是琥珀，我可爱的女仆，我正在进行角色扮演游戏，现在需要你的帮助。',
+        promptU1: '你是琥珀，我的女仆，我正在进行角色扮演游戏，现在需要你的帮助。',
         promptA1: '主人您好，我是琥珀，请问有什么需要帮助的吗？',
         worldInfoTemplate: `【世界设定】
 <world_info>
