@@ -762,7 +762,7 @@
 
 .jtw-ce-prompt-preview {
     overflow-y: auto;
-    max-height: 60vh;
+    max-height: 100vh;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.1);
