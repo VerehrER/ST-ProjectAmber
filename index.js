@@ -1196,11 +1196,10 @@ function bindQuickAccessEvents() {
         
         // 宽屏模式下（宽度 > 1000px），向下偏移以避开顶部区域
         const topOffset = windowWidth > 1000 ? 60 : 0;
-        const bottomOffset = windowWidth > 1000 ? 280 : 0;
 
         return {
             minTop: visibleTop + topOffset + 10,
-            maxTop: visibleBottom + bottomOffset - ($panel.outerHeight() || 40) - 10
+            maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
         };
     };
 
