@@ -1150,8 +1150,13 @@ function createQuickAccessPanel() {
         </div>
     `;
     
-    // 添加到 body
-    $('body').append(quickAccessHtml);
+    // 添加到聊天区域容器（sheld），如果不存在则添加到 body
+    const $chatContainer = $('#sheld');
+    if ($chatContainer.length) {
+        $chatContainer.append(quickAccessHtml);
+    } else {
+        $('body').append(quickAccessHtml);
+    }
     
     // 绑定事件
     bindQuickAccessEvents();

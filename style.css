@@ -1008,11 +1008,11 @@
 /* ==================== 快捷图标面板 ==================== */
 
 .jtw-quick-access {
-    position: fixed;
+    position: absolute;
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 99999;
+    z-index: 1000;
     display: flex;
     flex-direction: column;
     align-items: flex-end;
@@ -1103,8 +1103,8 @@
 @media (max-width: 1000px) {
     .jtw-quick-access {
         right: 8px;
-        bottom: 100px;
         top: auto;
+        bottom: 80px;
         transform: none;
     }
     
@@ -1139,7 +1139,7 @@
 @media (max-width: 500px) {
     .jtw-quick-access {
         right: 5px;
-        bottom: 90px;
+        bottom: 70px;
     }
     
     .jtw-quick-access-toggle {
