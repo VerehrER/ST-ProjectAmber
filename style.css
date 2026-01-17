@@ -373,6 +373,8 @@
     position: fixed;
     top: 0;
     left: 0;
+    right: 0;
+    bottom: 0;
     width: 100%;
     height: 100%;
     background: rgba(0, 0, 0, 0.7);
@@ -381,16 +383,6 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    box-sizing: border-box;
-}
-
-/* 手机端优化 */
-@media (max-width: 768px) {
-    .jtw-modal {
-        padding: 10px;
-        align-items: center;
-        overflow-y: auto;
-    }
 }
 
 .jtw-modal-content {
@@ -403,16 +395,7 @@
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    box-sizing: border-box;
-}
-
-/* 手机端优化 */
-@media (max-width: 768px) {
-    .jtw-modal-content {
-        max-height: 90vh;
-        border-radius: 4px;
-        min-height: 0;
-    }
+    margin: auto;
 }
 
 .jtw-modal-header {
@@ -609,15 +592,6 @@
     max-width: 1100px;
     width: 95%;
     max-height: 85vh;
-}
-
-/* 手机端优化 */
-@media (max-width: 768px) {
-    .jtw-ce-modal-content {
-        width: calc(100% - 20px);
-        max-height: 90vh;
-        min-height: 0;
-    }
 }
 
 /* 标签页导航 */
@@ -850,14 +824,6 @@
 .jtw-ce-result-modal-content {
     max-width: 700px;
     width: 90%;
-}
-
-/* 手机端优化 */
-@media (max-width: 768px) {
-    .jtw-ce-result-modal-content {
-        width: calc(100% - 20px);
-        min-height: 0;
-    }
 }
 
 .jtw-ce-result-count {
