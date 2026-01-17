@@ -140,6 +140,271 @@ async function getExistingCharacters() {
 }
 
 /**
+ * 解析条目内容中的角色数据块
+ * @param {string} content - 条目内容
+ * @returns {Array<{name: string, startIndex: number, endIndex: number, content: string}>}
+ */
+function parseCharacterBlocks(content) {
+    if (!content) return [];
+    
+    const blocks = [];
+    const lines = content.split('\n');
+    let currentBlock = null;
+    let currentStartLine = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        const nameMatch = line.match(/^name:\s*(.+)$/i);
+        
+        if (nameMatch) {
+            // 保存上一个块
+            if (currentBlock) {
+                currentBlock.endLine = i - 1;
+                // 找到最后一个非空行
+                while (currentBlock.endLine > currentBlock.startLine && 
+                       !lines[currentBlock.endLine].trim()) {
+                    currentBlock.endLine--;
+                }
+                currentBlock.content = lines.slice(currentBlock.startLine, currentBlock.endLine + 1).join('\n');
+                blocks.push(currentBlock);
+            }
+            
+            // 开始新块
+            currentBlock = {
+                name: nameMatch[1].trim(),
+                startLine: i,
+                endLine: i,
+                content: ''
+            };
+            currentStartLine = i;
+        }
+    }
+    
+    // 保存最后一个块
+    if (currentBlock) {
+        currentBlock.endLine = lines.length - 1;
+        // 找到最后一个非空行
+        while (currentBlock.endLine > currentBlock.startLine && 
+               !lines[currentBlock.endLine].trim()) {
+            currentBlock.endLine--;
+        }
+        currentBlock.content = lines.slice(currentBlock.startLine, currentBlock.endLine + 1).join('\n');
+        blocks.push(currentBlock);
+    }
+    
+    return blocks;
+}
+
+/**
+ * 更新条目中的角色数据
+ * @param {string} targetName - 要更新的角色名称
+ * @param {object} updateData - 更新的数据
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function updateCharacterInEntry(targetName, updateData) {
+    const { jsonToYaml } = dependencies;
+    const { entry } = await getCurrentWorldbookEntry();
+    
+    if (!entry?.content) {
+        return { success: false, error: `未找到角色「${targetName}」的条目` };
+    }
+    
+    const blocks = parseCharacterBlocks(entry.content);
+    const targetBlock = blocks.find(b => 
+        b.name.toLowerCase() === targetName.toLowerCase()
+    );
+    
+    if (!targetBlock) {
+        return { success: false, error: `未找到角色「${targetName}」` };
+    }
+    
+    // 解析现有角色数据为对象
+    const existingData = parseYamlBlock(targetBlock.content);
+    
+    // 合并更新数据（深度合并）
+    const mergedData = deepMerge(existingData, updateData);
+    
+    // 移除 update_for 字段
+    delete mergedData.update_for;
+    
+    // 转换回 YAML
+    const newBlockContent = jsonToYaml(mergedData, 0);
+    
+    // 重建条目内容
+    const lines = entry.content.split('\n');
+    const beforeLines = lines.slice(0, targetBlock.startLine);
+    const afterLines = lines.slice(targetBlock.endLine + 1);
+    
+    // 去除前后多余空行
+    while (beforeLines.length > 0 && !beforeLines[beforeLines.length - 1].trim()) {
+        beforeLines.pop();
+    }
+    while (afterLines.length > 0 && !afterLines[0].trim()) {
+        afterLines.shift();
+    }
+    
+    const newContent = [
+        ...beforeLines,
+        beforeLines.length > 0 ? '' : null,  // 添加分隔空行
+        newBlockContent,
+        afterLines.length > 0 ? '' : null,   // 添加分隔空行
+        ...afterLines
+    ].filter(line => line !== null).join('\n') + '\n\n';
+    
+    // 保存更新后的内容
+    return saveEntryToWorldbook(newContent);
+}
+
+/**
+ * 解析 YAML 块为对象（简化版本，支持常见格式）
+ * @param {string} yamlContent - YAML 内容
+ * @returns {object}
+ */
+function parseYamlBlock(yamlContent) {
+    const result = {};
+    const lines = yamlContent.split('\n');
+    
+    let currentKey = null;
+    let nestedKey = null;
+    let nestedObj = null;
+    let arrayKey = null;
+    let arrayItems = [];
+    let lastIndent = 0;
+    
+    const finishArray = () => {
+        if (arrayKey && arrayItems.length > 0) {
+            if (nestedObj && nestedKey) {
+                nestedObj[arrayKey] = [...arrayItems];
+            } else {
+                result[arrayKey] = [...arrayItems];
+            }
+        }
+        arrayKey = null;
+        arrayItems = [];
+    };
+    
+    const finishNested = () => {
+        if (nestedKey && nestedObj && Object.keys(nestedObj).length > 0) {
+            result[nestedKey] = { ...nestedObj };
+        }
+        nestedKey = null;
+        nestedObj = null;
+    };
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        
+        const indent = line.search(/\S/);
+        const content = line.trim();
+        
+        // 检查是否是数组项
+        if (content.startsWith('- ')) {
+            const itemContent = content.slice(2).trim();
+            if (arrayKey) {
+                arrayItems.push(itemContent);
+            }
+            continue;
+        }
+        
+        // 检查缩进变化，判断是否需要结束当前块
+        if (indent === 0 && lastIndent > 0) {
+            finishArray();
+            finishNested();
+        }
+        
+        // 解析键值对
+        const colonIndex = content.indexOf(':');
+        if (colonIndex === -1) continue;
+        
+        const key = content.slice(0, colonIndex).trim();
+        const value = content.slice(colonIndex + 1).trim();
+        
+        if (indent === 0) {
+            // 顶级键
+            finishArray();
+            finishNested();
+            
+            if (value === '' || value === '{}') {
+                // 开始嵌套对象
+                nestedKey = key;
+                nestedObj = {};
+            } else if (value === '[]') {
+                // 空数组
+                result[key] = [];
+            } else {
+                // 普通值
+                result[key] = value;
+            }
+            currentKey = key;
+        } else if (indent > 0) {
+            // 缩进的键
+            finishArray();
+            
+            if (nestedObj) {
+                if (value === '' || value === '[]') {
+                    // 开始数组
+                    arrayKey = key;
+                    arrayItems = [];
+                } else {
+                    nestedObj[key] = value;
+                }
+            } else {
+                // 可能是前一个顶级键的嵌套内容，创建嵌套对象
+                if (currentKey && !result[currentKey]) {
+                    nestedKey = currentKey;
+                    nestedObj = {};
+                }
+                if (nestedObj) {
+                    if (value === '' || value === '[]') {
+                        arrayKey = key;
+                        arrayItems = [];
+                    } else {
+                        nestedObj[key] = value;
+                    }
+                }
+            }
+        }
+        
+        lastIndent = indent;
+    }
+    
+    // 处理最后的数组和嵌套对象
+    finishArray();
+    finishNested();
+    
+    return result;
+}
+
+/**
+ * 深度合并对象
+ * @param {object} target - 目标对象
+ * @param {object} source - 源对象
+ * @returns {object}
+ */
+function deepMerge(target, source) {
+    const result = { ...target };
+    
+    for (const key of Object.keys(source)) {
+        if (source[key] === null || source[key] === undefined) {
+            continue;
+        }
+        
+        if (typeof source[key] === 'object' && !Array.isArray(source[key])) {
+            if (typeof result[key] === 'object' && !Array.isArray(result[key])) {
+                result[key] = deepMerge(result[key], source[key]);
+            } else {
+                result[key] = { ...source[key] };
+            }
+        } else {
+            result[key] = source[key];
+        }
+    }
+    
+    return result;
+}
+
+/**
  * 保存条目内容到世界书
  * @param {string} content - 条目内容
  * @param {object} options - 条目属性选项
@@ -265,7 +530,7 @@ async function getPromptPreviewData() {
 /**
  * 执行角色列表提取（返回解析结果，不直接保存）
  * @param {function} showStatus - 状态显示回调
- * @returns {Promise<{success: boolean, characters?: Array, error?: string}>}
+ * @returns {Promise<{success: boolean, newCharacters?: Array, updateCharacters?: Array, error?: string}>}
  */
 async function runExtraction(showStatus) {
     const { callLLMJson } = dependencies;
@@ -286,52 +551,83 @@ async function runExtraction(showStatus) {
         }
         
         if (result.length === 0) {
-            showStatus("没有发现新角色");
-            return { success: true, characters: [] };
+            showStatus("没有发现角色数据");
+            return { success: true, newCharacters: [], updateCharacters: [] };
         }
         
-        // 过滤掉已存在的角色
-        const newCharacters = result.filter(c => 
-            c.name && !existingNames.some(en => 
-                en.toLowerCase() === c.name.toLowerCase()
-            )
-        );
+        // 分离新增角色和更新角色
+        const newCharacters = [];
+        const updateCharacters = [];
+        const updateNotFound = [];
         
-        if (newCharacters.length === 0) {
-            showStatus("没有发现新角色（所有角色已存在）");
-            return { success: true, characters: [], message: "所有角色已存在" };
+        for (const char of result) {
+            if (!char.name && !char.update_for) continue;
+            
+            // 检查是否为更新操作
+            if (char.update_for) {
+                const targetName = char.update_for;
+                const exists = existingNames.some(en => 
+                    en.toLowerCase() === targetName.toLowerCase()
+                );
+                
+                if (exists) {
+                    updateCharacters.push(char);
+                    console.log(`[角色提取] 发现更新角色: ${targetName}`, char);
+                } else {
+                    updateNotFound.push(targetName);
+                    console.log(`[角色提取] 更新目标不存在: ${targetName}`);
+                }
+            } else {
+                // 新增角色，检查是否已存在
+                const alreadyExists = existingNames.some(en => 
+                    en.toLowerCase() === char.name.toLowerCase()
+                );
+                
+                if (!alreadyExists) {
+                    newCharacters.push(char);
+                }
+            }
         }
         
-        console.log(`[角色提取] 发现 ${newCharacters.length} 个新角色:`, newCharacters);
-        showStatus(`发现 ${newCharacters.length} 个新角色`);
+        const totalNew = newCharacters.length;
+        const totalUpdate = updateCharacters.length;
+        const totalNotFound = updateNotFound.length;
         
-        return { success: true, characters: newCharacters };
+        if (totalNew === 0 && totalUpdate === 0) {
+            let msg = "没有发现需要处理的角色";
+            if (totalNotFound > 0) {
+                msg += `（${totalNotFound} 个更新目标不存在：${updateNotFound.join('、')}）`;
+            }
+            showStatus(msg);
+            return { 
+                success: true, 
+                newCharacters: [], 
+                updateCharacters: [], 
+                updateNotFound,
+                message: msg 
+            };
+        }
+        
+        let statusMsg = [];
+        if (totalNew > 0) statusMsg.push(`${totalNew} 个新角色`);
+        if (totalUpdate > 0) statusMsg.push(`${totalUpdate} 个更新`);
+        if (totalNotFound > 0) statusMsg.push(`${totalNotFound} 个更新目标不存在`);
+        
+        console.log(`[角色提取] 结果: 新增 ${totalNew}, 更新 ${totalUpdate}, 未找到 ${totalNotFound}`);
+        showStatus(`发现: ${statusMsg.join('，')}`);
+        
+        return { 
+            success: true, 
+            newCharacters, 
+            updateCharacters,
+            updateNotFound
+        };
         
     } catch (e) {
         console.error(`[角色提取] 提取角色失败:`, e);
         showStatus(`提取失败: ${e.message}`, true);
         return { success: false, error: e.message };
     }
-}
-
-/**
- * 执行角色列表提取（兼容旧API）
- * @param {function} showStatus - 状态显示回调
- */
-export async function extractCharacterList(showStatus) {
-    const result = await runExtraction(showStatus);
-    
-    if (result.success && result.characters && result.characters.length > 0) {
-        const saveResult = await appendCharactersToWorldbook(result.characters);
-        if (saveResult.success) {
-            showStatus(`成功添加 ${result.characters.length} 个角色到世界书`);
-        } else {
-            showStatus(saveResult.error, true);
-        }
-        return saveResult;
-    }
-    
-    return result;
 }
 
 /**
@@ -449,13 +745,47 @@ async function loadPromptPreview() {
 
 /**
  * 显示提取结果弹窗
- * @param {Array} characters - 提取到的角色列表
+ * @param {Array} newCharacters - 新增的角色列表
+ * @param {Array} updateCharacters - 需要更新的角色列表
+ * @param {Array} updateNotFound - 更新目标不存在的角色名
  */
-function showResultModal(characters) {
+function showResultModal(newCharacters = [], updateCharacters = [], updateNotFound = []) {
     const { jsonToYaml } = dependencies;
-    const content = characters.map(char => jsonToYaml(char, 0)).join('\n\n');
+    
+    let contentParts = [];
+    let countText = [];
+    
+    // 新增角色部分
+    if (newCharacters.length > 0) {
+        const newContent = newCharacters.map(char => jsonToYaml(char, 0)).join('\n\n');
+        contentParts.push(`# ===== 新增角色 (${newCharacters.length}) =====\n\n${newContent}`);
+        countText.push(`${newCharacters.length} 个新角色`);
+    }
+    
+    // 更新角色部分
+    if (updateCharacters.length > 0) {
+        const updateContent = updateCharacters.map(char => {
+            const yaml = jsonToYaml(char, 0);
+            return `# 更新目标: ${char.update_for}\n${yaml}`;
+        }).join('\n\n');
+        contentParts.push(`# ===== 更新角色 (${updateCharacters.length}) =====\n\n${updateContent}`);
+        countText.push(`${updateCharacters.length} 个更新`);
+    }
+    
+    // 更新目标不存在提示
+    if (updateNotFound.length > 0) {
+        contentParts.push(`# ===== 更新目标不存在 (${updateNotFound.length}) =====\n# ${updateNotFound.join('、')}`);
+        countText.push(`${updateNotFound.length} 个更新目标不存在`);
+    }
+    
+    const content = contentParts.join('\n\n');
     $('#jtw-ce-result-content').val(content);
-    $('#jtw-ce-result-count').text(`提取到 ${characters.length} 个新角色`);
+    $('#jtw-ce-result-count').text(`提取结果: ${countText.join('，') || '无数据'}`);
+    
+    // 存储数据供保存时使用
+    $('#jtw-ce-result-modal').data('newCharacters', newCharacters);
+    $('#jtw-ce-result-modal').data('updateCharacters', updateCharacters);
+    
     $('#jtw-ce-result-modal').fadeIn(200);
 }
 
@@ -482,42 +812,91 @@ function hidePromptModal() {
 }
 
 /**
- * 保存提取结果
+ * 保存提取结果（支持新增和更新）
  */
 async function saveExtractionResult() {
-    const content = $('#jtw-ce-result-content').val();
+    const $modal = $('#jtw-ce-result-modal');
+    const newCharacters = $modal.data('newCharacters') || [];
+    const updateCharacters = $modal.data('updateCharacters') || [];
     const $saveBtn = $('#jtw-ce-result-save');
     const $status = $('#jtw-ce-result-status');
     
-    if (!content.trim()) {
-        $status.text('内容不能为空').removeClass('success').addClass('error').show();
+    if (newCharacters.length === 0 && updateCharacters.length === 0) {
+        $status.text('没有需要保存的内容').removeClass('success').addClass('error').show();
         setTimeout(() => $status.fadeOut(), 3000);
         return;
     }
     
     $saveBtn.prop('disabled', true).text('保存中...');
     
-    // 追加到现有内容
-    const { entry } = await getCurrentWorldbookEntry();
-    const existingContent = entry?.content || '';
-    const finalContent = existingContent 
-        ? `${existingContent.trim()}\n\n${content.trim()}\n\n`
-        : `${content.trim()}\n\n`;
+    const results = [];
+    let hasError = false;
     
-    const result = await saveEntryToWorldbook(finalContent);
+    // 1. 先处理更新操作
+    if (updateCharacters.length > 0) {
+        $status.text(`正在更新 ${updateCharacters.length} 个角色...`).show();
+        
+        for (const char of updateCharacters) {
+            const targetName = char.update_for;
+            const updateData = { ...char };
+            // 保留 name 字段为更新目标名称
+            updateData.name = targetName;
+            
+            const result = await updateCharacterInEntry(targetName, updateData);
+            
+            if (result.success) {
+                results.push({ type: 'update', name: targetName, success: true });
+                console.log(`[角色提取] 成功更新角色: ${targetName}`);
+            } else {
+                results.push({ type: 'update', name: targetName, success: false, error: result.error });
+                console.error(`[角色提取] 更新角色失败: ${targetName}`, result.error);
+                hasError = true;
+            }
+        }
+    }
     
-    if (result.success) {
-        $status.text('保存成功').removeClass('error').addClass('success').show();
+    // 2. 处理新增操作
+    if (newCharacters.length > 0) {
+        $status.text(`正在添加 ${newCharacters.length} 个新角色...`).show();
+        
+        const appendResult = await appendCharactersToWorldbook(newCharacters);
+        
+        if (appendResult.success) {
+            results.push({ type: 'add', count: newCharacters.length, success: true });
+            console.log(`[角色提取] 成功添加 ${newCharacters.length} 个新角色`);
+        } else {
+            results.push({ type: 'add', count: newCharacters.length, success: false, error: appendResult.error });
+            console.error(`[角色提取] 添加新角色失败:`, appendResult.error);
+            hasError = true;
+        }
+    }
+    
+    // 构建结果消息
+    const successUpdates = results.filter(r => r.type === 'update' && r.success).length;
+    const failedUpdates = results.filter(r => r.type === 'update' && !r.success);
+    const addResult = results.find(r => r.type === 'add');
+    
+    let statusMessages = [];
+    if (successUpdates > 0) statusMessages.push(`更新 ${successUpdates} 个成功`);
+    if (failedUpdates.length > 0) statusMessages.push(`更新 ${failedUpdates.length} 个失败`);
+    if (addResult?.success) statusMessages.push(`新增 ${addResult.count} 个成功`);
+    if (addResult && !addResult.success) statusMessages.push(`新增失败: ${addResult.error}`);
+    
+    const statusText = statusMessages.join('，') || '操作完成';
+    
+    if (hasError) {
+        $status.text(statusText).removeClass('success').addClass('error').show();
+        $saveBtn.prop('disabled', false).text('保存到世界书');
+    } else {
+        $status.text(statusText).removeClass('error').addClass('success').show();
         setTimeout(() => {
             hideResultModal();
             loadEntryContent(); // 刷新条目内容
-        }, 1000);
-    } else {
-        $status.text(result.error).removeClass('success').addClass('error').show();
+        }, 1500);
+        $saveBtn.prop('disabled', false).text('保存到世界书');
     }
     
-    $saveBtn.prop('disabled', false).text('保存到世界书');
-    setTimeout(() => $status.fadeOut(), 3000);
+    setTimeout(() => $status.fadeOut(), 5000);
 }
 
 /**
@@ -538,8 +917,18 @@ async function runAndShowResult() {
     
     $btn.prop('disabled', false).text('运行提取');
     
-    if (result.success && result.characters && result.characters.length > 0) {
-        showResultModal(result.characters);
+    if (result.success) {
+        const hasNew = result.newCharacters && result.newCharacters.length > 0;
+        const hasUpdate = result.updateCharacters && result.updateCharacters.length > 0;
+        const hasNotFound = result.updateNotFound && result.updateNotFound.length > 0;
+        
+        if (hasNew || hasUpdate || hasNotFound) {
+            showResultModal(
+                result.newCharacters || [],
+                result.updateCharacters || [],
+                result.updateNotFound || []
+            );
+        }
     }
     
     setTimeout(() => $status.fadeOut(), 5000);

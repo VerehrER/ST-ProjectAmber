@@ -65,22 +65,33 @@ const defaultSettings = {
 {{chatHistory}}
 </chat_history>
 
-### 输出要求
-
+## 输出要求
 1. 返回一个合法 JSON 数组，使用标准 JSON 语法（键名和字符串都用半角双引号 "）
-2. 只提取有具体称呼的新角色，不包括{{user}}自己和<world_info>中已经存在设定信息的角色。
-3. 文本内容中如需使用引号，请使用单引号或中文引号「」或“”，不要使用半角双引号 "
-4. 如果没有新角色返回 []
+2. 文本内容中如需使用引号，请使用单引号或中文引号「」或“”，不要使用半角双引号 "
+3. 如果没有新角色，以及无需更新时，返回 []
+
+### 新增角色：
+1. 提取有具体称呼的新角色，不包括{{user}}自己和<world_info>中已经存在设定信息的角色。
 
 模板: [{
   "name": "角色名",
   "intro": "外貌特征与身份的详细描述",
   "background": "角色生平与背景。解释由于什么过去导致了现在的性格，以及他为什么会出现在当前场景中。",
-  "persona": {
-    "keywords": ["性格关键词1", "性格关键词2", "性格关键词3"],
-    "speaking_style": "说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）等。对待主角的态度（尊敬、喜爱、蔑视、恐惧等）。"
-  }
-}]`,
+  "persona": ["性格关键词1", "性格关键词2", "性格关键词3"],
+  "speaking_style": "说话的语气、语速、口癖（如喜欢用'嗯'、'那个'）等。对待主角的态度（尊敬、喜爱、蔑视、恐惧等）。"
+}]
+
+### 更新角色：
+1. 如果需要对已经存在的角色更新，请根据新的剧情经历更新其背景和性格描述。
+2. 并非所有条例都需要更新，只需填写有变化的部分，其他可省略。
+
+举例: （假设intro与persona无需更新）
+[{
+  "update_for": "需要更新的原角色名或代称name",
+  "name": "角色名更新",
+  "background": "角色生平与背景更新",
+}]
+`,
         promptA2: "了解，开始生成JSON:"
     }
 
@@ -2211,8 +2222,6 @@ window.JsonToWorldbook = {
     saveJsonToWorldbook,
     getAvailableWorldbooks,
     getCharacterWorldbook,
-    // 角色提取通过故事助手模块调用
-    extractCharacterList: (statusCallback) => CharacterExtract.extractCharacterList(statusCallback || showStatus),
 };
 
 // ==================== 初始化 ====================
