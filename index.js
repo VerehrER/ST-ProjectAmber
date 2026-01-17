@@ -1406,7 +1406,7 @@ function handleQuickAccessAction(action) {
  */
 function openExtensionPanel(tabId) {
     // 1. 先打开顶部的扩展设置面板
-    const $extensionsButton = $('#extensionsMenuButton');
+    const $extensionsButton = $('#extensions_button');
     const $extensionsPanel = $('#extensions_settings2').parent();
     
     // 如果扩展面板未显示，点击按钮打开
