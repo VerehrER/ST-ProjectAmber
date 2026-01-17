@@ -514,11 +514,25 @@ async function previewTaskPrompt(index) {
             const endIndex = endLayer;
             const selectedMessages = chat.slice(startIndex, endIndex);
             
-            // 格式化消息
-            chatHistory = selectedMessages.map(msg => {
+            // 格式化消息并应用标签处理
+            const { extractIncludeTags, removeTaggedContent } = dependencies;
+            const lines = selectedMessages.map(msg => {
                 const name = msg.is_user ? userName : charName;
-                return `${name}: ${msg.mes}`;
-            }).join('\n\n');
+                let content = msg.mes || '';
+                
+                // 应用标签处理
+                if (settings.includeTags && settings.includeTags.trim()) {
+                    content = extractIncludeTags(content, settings.includeTags);
+                    if (settings.applyExcludeAfterInclude && content) {
+                        content = removeTaggedContent(content, settings.excludeTags);
+                    }
+                } else {
+                    content = removeTaggedContent(content, settings.excludeTags);
+                }
+                
+                return `${name}: ${content}`;
+            });
+            chatHistory = lines.join('\n\n');
         } else {
             // 使用全局设置
             chatHistory = getChatHistory(settings.historyCount || 50);
@@ -660,11 +674,25 @@ async function runTask(index) {
             const endIndex = endLayer;
             const selectedMessages = chat.slice(startIndex, endIndex);
             
-            // 格式化消息
-            chatHistory = selectedMessages.map(msg => {
+            // 格式化消息并应用标签处理
+            const { extractIncludeTags, removeTaggedContent } = dependencies;
+            const lines = selectedMessages.map(msg => {
                 const name = msg.is_user ? userName : charName;
-                return `${name}: ${msg.mes}`;
-            }).join('\n\n');
+                let content = msg.mes || '';
+                
+                // 应用标签处理
+                if (settings.includeTags && settings.includeTags.trim()) {
+                    content = extractIncludeTags(content, settings.includeTags);
+                    if (settings.applyExcludeAfterInclude && content) {
+                        content = removeTaggedContent(content, settings.excludeTags);
+                    }
+                } else {
+                    content = removeTaggedContent(content, settings.excludeTags);
+                }
+                
+                return `${name}: ${content}`;
+            });
+            chatHistory = lines.join('\n\n');
         } else {
             // 使用全局设置
             const historyCount = settings.historyCount ?? 50;
