@@ -134,10 +134,11 @@ async function buildMessages(userQuestion, options = {}) {
     
     // 如果注入世界书
     if (options.includeWorldInfo) {
-        // 根据选项决定是获取全部条目还是仅激活的条目，以及是否刷新激活状态
+        // 根据选项决定是获取全部条目还是仅激活的条目
+        // 仅激活模式会自动刷新激活状态
         const worldInfo = await getWorldInfoContent({ 
             activatedOnly: options.worldInfoActivatedOnly,
-            refreshActivation: options.worldInfoRefreshActivation
+            refreshActivation: options.worldInfoActivatedOnly
         });
         let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
         worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
@@ -301,7 +302,6 @@ async function showPromptPreviewModal() {
     const question = $('#jtw-aa-question').val().trim() || '（请输入您的问题）';
     const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
     const worldInfoActivatedOnly = $('input[name="jtw-aa-worldinfo-mode"]:checked').val() === 'activated';
-    const worldInfoRefreshActivation = $('#jtw-aa-worldinfo-refresh').prop('checked');
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
@@ -314,7 +314,6 @@ async function showPromptPreviewModal() {
         const messages = await getPromptPreview(question, {
             includeWorldInfo,
             worldInfoActivatedOnly,
-            worldInfoRefreshActivation,
             includeChatHistory,
             historyStartLayer,
             historyEndLayer
@@ -357,7 +356,8 @@ async function runAsk() {
         return;
     }
     
-    const worldInfoRefreshActivation = $('#jtw-aa-worldinfo-refresh').prop('checked');
+    const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
+    const worldInfoActivatedOnly = $('input[name="jtw-aa-worldinfo-mode"]:checked').val() === 'activated';
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
@@ -370,9 +370,6 @@ async function runAsk() {
     
     try {
         const response = await askAmber(question, {
-            includeWorldInfo,
-            worldInfoActivatedOnly,
-            worldInfoRefreshActivationAmber(question, {
             includeWorldInfo,
             worldInfoActivatedOnly,
             includeChatHistory,
@@ -629,11 +626,7 @@ function getModalHtml() {
                                         </label>
                                         <div class="jtw-checkbox-row" id="jtw-aa-worldinfo-refresh-row" style="display: none; padding-left: 24px; margin-top: 5px;">
                                             <input type="checkbox" id="jtw-aa-worldinfo-refresh" checked />
-                                            <label for="jtw-aa-worldinfo-refresh">自动刷新激活状态</label>
-                                        </div>
-                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"基于关键词匹配结果，勾选自动刷新可实时计算）</div>
-                                    </div>
-                                </div>
+                                            <label for="hint" style="padding-left: 24px;">（"仅激活"会自动刷新并基于当前聊天内容的关键词匹配结果
                                 <div class="jtw-aa-history-row">
                                     <div class="jtw-checkbox-row">
                                         <input type="checkbox" id="jtw-aa-include-history" checked />
@@ -891,16 +884,6 @@ function bindModalEvents() {
     $('input[name="jtw-aa-worldinfo-mode"]').off('change').on('change', function() {
         const isActivatedOnly = $(this).val() === 'activated';
         if (isActivatedOnly) {
-            $('#jtw-aa-worldinfo-refresh-row').show();
-        } else {
-            $('#jtw-aa-worldinfo-refresh-row').hide();
-        }
-    });
-    
-    // 注入上下文勾选框变化时显示/隐藏层数范围
-    $('#jtw-aa-include-history').off('change').on('change', function() {
-        if ($(this).prop('checked')) {
-            $('#jtw-aa-history-range-inline').show();
         } else {
             $('#jtw-aa-history-range-inline').hide();
         }
