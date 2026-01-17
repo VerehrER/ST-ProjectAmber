@@ -1181,26 +1181,21 @@ function bindQuickAccessEvents() {
     let startTop = 0;
     let dragStartTime = 0;
     
-    // 获取可视区域的边界（相对于父容器的 offsetTop 坐标）
+    // 获取可视区域的边界（使用窗口高度而不是容器高度）
     const getVisibleBounds = () => {
         const $parent = $panel.parent();
-        const parentRect = $parent[0].getBoundingClientRect();
+        const parentOffset = $parent.offset();
+        const parentScrollTop = $parent.scrollTop() || 0;
         const windowHeight = $(window).height();
-        const panelHeight = $panel.outerHeight() || 40;
         
-        // 计算父容器在视口中可见的部分（相对于父容器顶部的偏移）
-        // 如果父容器顶部在屏幕上方，visibleTop 就是被遮挡的高度
-        // 如果父容器顶部在屏幕下方，visibleTop 就是 0
-        const visibleTop = Math.max(0, -parentRect.top);
-        
-        // 计算可见的底部位置
-        // 如果父容器底部在屏幕下方，用 (windowHeight - parentRect.top) 作为可见高度
-        // 如果父容器底部在屏幕内，用父容器的实际高度
-        const visibleBottom = Math.min(parentRect.height, windowHeight - parentRect.top);
+        // 计算父容器在屏幕中的可见部分
+        const parentTop = parentOffset ? parentOffset.top : 0;
+        const visibleTop = Math.max(0, -parentTop + parentScrollTop);
+        const visibleBottom = Math.min($parent.height(), windowHeight - parentTop + parentScrollTop);
         
         return {
             minTop: visibleTop + 10,
-            maxTop: visibleBottom - panelHeight - 10
+            maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
         };
     };
 
