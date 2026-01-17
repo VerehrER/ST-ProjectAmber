@@ -1182,7 +1182,7 @@ export function renderCustomTasksPanel() {
                     <select id="jtw-parallel-task-position" class="jtw-select">
                         <option value="before">主提示词之前 (Before Main Prompt)</option>
                         <option value="after">主提示词之后 (After Main Prompt)</option>
-                        <option value="chat" selected>聊天记录中 (In Chat @ Depth)</option>
+                        <option value="chat" selected>深度位置 (@ Depth)</option>
                     </select>
                 </div>
                 <div id="jtw-parallel-depth-container" style="margin-bottom: 10px;">
