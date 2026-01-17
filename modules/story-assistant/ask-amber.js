@@ -24,7 +24,7 @@ export function getModuleInfo() {
         id: 'ask-amber',
         name: '问问琥珀',
         description: '与AI助手琥珀对话，获取帮助和建议',
-        icon: '💎'
+        icon: '✨'
     };
 }
 
@@ -57,9 +57,6 @@ function getDefaultAmberSettings() {
 {{chatHistory}}
 </chat_history>`,
         promptA2: '',  // 可选，默认留空
-        // 历史消息范围
-        historyCountMin: null,   // null 表示使用全局设置
-        historyCountMax: null,   // null 表示与 min 相同
         // 世界书结果默认设置
         worldbookDefaults: {
             entryName: '',
@@ -140,32 +137,46 @@ async function buildMessages(userQuestion, options = {}) {
     
     // 如果注入上下文
     if (options.includeChatHistory) {
-        // 计算历史消息数量
-        let historyCount;
-        const minCount = amberSettings.historyCountMin;
-        const maxCount = amberSettings.historyCountMax;
+        const ctx = getContext();
+        const chat = ctx.chat || [];
+        const totalMessages = chat.length;
         
-        if (minCount !== null && minCount !== undefined && minCount !== '') {
-            const min = parseInt(minCount);
-            const max = maxCount !== null && maxCount !== undefined && maxCount !== '' 
-                ? parseInt(maxCount) 
-                : min;
-            
-            // 在范围内随机选择
-            if (max > min) {
-                historyCount = Math.floor(Math.random() * (max - min + 1)) + min;
-            } else {
-                historyCount = min;
-            }
+        // 获取层数范围
+        let startLayer = options.historyStartLayer;
+        let endLayer = options.historyEndLayer;
+        
+        // 如果没有指定范围，使用全局设置的消息数量
+        if (!startLayer && !endLayer) {
+            const historyCount = settings.historyCount || 50;
+            const chatHistory = getChatHistory(historyCount);
+            let chatHistoryContent = amberSettings.chatHistoryTemplate || getDefaultAmberSettings().chatHistoryTemplate;
+            chatHistoryContent = replaceVars(chatHistoryContent).replace(/\{\{chatHistory\}\}/g, chatHistory);
+            user2Parts.push(chatHistoryContent);
         } else {
-            // 使用全局设置
-            historyCount = settings.historyCount || 50;
+            // 根据层数范围获取消息
+            startLayer = parseInt(startLayer) || 1;
+            endLayer = parseInt(endLayer) || totalMessages;
+            
+            // 限制范围
+            startLayer = Math.max(1, Math.min(startLayer, totalMessages));
+            endLayer = Math.max(startLayer, Math.min(endLayer, totalMessages));
+            
+            // 转换为数组索引（层数从1开始，数组索引从0开始）
+            const startIndex = startLayer - 1;
+            const endIndex = endLayer;
+            
+            const selectedMessages = chat.slice(startIndex, endIndex);
+            const lines = selectedMessages.map(msg => {
+                const name = msg.is_user ? (ctx.name1 || '{{user}}') : (msg.name || ctx.name2 || '{{char}}');
+                const content = msg.mes || '';
+                return `${name}: ${content}`;
+            });
+            
+            const chatHistory = lines.join('\n\n');
+            let chatHistoryContent = amberSettings.chatHistoryTemplate || getDefaultAmberSettings().chatHistoryTemplate;
+            chatHistoryContent = replaceVars(chatHistoryContent).replace(/\{\{chatHistory\}\}/g, chatHistory);
+            user2Parts.push(chatHistoryContent);
         }
-        
-        const chatHistory = getChatHistory(historyCount);
-        let chatHistoryContent = amberSettings.chatHistoryTemplate || getDefaultAmberSettings().chatHistoryTemplate;
-        chatHistoryContent = replaceVars(chatHistoryContent).replace(/\{\{chatHistory\}\}/g, chatHistory);
-        user2Parts.push(chatHistoryContent);
     }
     
     // 添加用户问题
@@ -249,6 +260,8 @@ async function showPromptPreviewModal() {
     const question = $('#jtw-aa-question').val().trim() || '（请输入您的问题）';
     const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
+    const historyStartLayer = $('#jtw-aa-history-start').val();
+    const historyEndLayer = $('#jtw-aa-history-end').val();
     
     const $container = $('#jtw-aa-prompt-preview-content');
     $container.html('<div class="jtw-ce-loading">加载中...</div>');
@@ -257,7 +270,9 @@ async function showPromptPreviewModal() {
     try {
         const messages = await getPromptPreview(question, {
             includeWorldInfo,
-            includeChatHistory
+            includeChatHistory,
+            historyStartLayer,
+            historyEndLayer
         });
         
         const htmlContent = messages
@@ -299,6 +314,8 @@ async function runAsk() {
     
     const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
+    const historyStartLayer = $('#jtw-aa-history-start').val();
+    const historyEndLayer = $('#jtw-aa-history-end').val();
     
     const $btn = $('#jtw-aa-run');
     const $status = $('#jtw-aa-status');
@@ -309,7 +326,9 @@ async function runAsk() {
     try {
         const response = await askAmber(question, {
             includeWorldInfo,
-            includeChatHistory
+            includeChatHistory,
+            historyStartLayer,
+            historyEndLayer
         });
         
         if (!response) {
@@ -523,7 +542,7 @@ export function renderSettingsPanel() {
         <div id="jtw-ask-amber-modal" class="jtw-modal" style="display: none;">
             <div class="jtw-modal-content jtw-aa-modal-content">
                 <div class="jtw-modal-header">
-                    <h3>💎 问问琥珀</h3>
+                    <h3>✨ 问问琥珀</h3>
                     <button class="jtw-modal-close jtw-aa-close-modal">✕</button>
                 </div>
                 
@@ -537,7 +556,7 @@ export function renderSettingsPanel() {
                     <!-- 互动页 -->
                     <div class="jtw-aa-tab-content active" id="jtw-aa-tab-chat">
                         <div class="jtw-aa-greeting">
-                            <div class="jtw-aa-greeting-avatar">💎</div>
+                            <div class="jtw-aa-greeting-avatar">✨</div>
                             <div class="jtw-aa-greeting-text">主人您好，我是琥珀，请问有什么需要帮助的吗？</div>
                         </div>
                         
@@ -553,9 +572,18 @@ export function renderSettingsPanel() {
                                     <input type="checkbox" id="jtw-aa-include-worldinfo" checked />
                                     <label for="jtw-aa-include-worldinfo">注入世界书内容</label>
                                 </div>
-                                <div class="jtw-checkbox-row">
-                                    <input type="checkbox" id="jtw-aa-include-history" checked />
-                                    <label for="jtw-aa-include-history">注入上下文（聊天历史）</label>
+                                <div class="jtw-aa-history-row">
+                                    <div class="jtw-checkbox-row">
+                                        <input type="checkbox" id="jtw-aa-include-history" checked />
+                                        <label for="jtw-aa-include-history">注入上下文（聊天历史）</label>
+                                    </div>
+                                    <div class="jtw-aa-history-range-inline" id="jtw-aa-history-range-inline">
+                                        <label>层数范围：</label>
+                                        <input type="number" id="jtw-aa-history-start" class="jtw-input jtw-aa-layer-input" placeholder="开始" min="1" />
+                                        <span>~</span>
+                                        <input type="number" id="jtw-aa-history-end" class="jtw-input jtw-aa-layer-input" placeholder="结束" min="1" />
+                                        <span class="jtw-hint" style="margin-left: 8px;">（留空使用全局设置）</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -598,22 +626,6 @@ export function renderSettingsPanel() {
                             <h4>Assistant 消息 2（可选）</h4>
                             <textarea id="jtw-aa-prompt-a2" class="jtw-input" rows="1" placeholder="留空则省略此消息"></textarea>
                         </div>
-                        
-                        <div class="jtw-section">
-                            <h4>历史消息数量</h4>
-                            <div class="jtw-aa-history-range">
-                                <div>
-                                    <label>最小值（留空使用全局设置）</label>
-                                    <input type="number" id="jtw-aa-history-min" class="jtw-input" placeholder="留空使用全局" min="0" />
-                                </div>
-                                <span class="jtw-aa-range-separator">~</span>
-                                <div>
-                                    <label>最大值（留空与最小值相同）</label>
-                                    <input type="number" id="jtw-aa-history-max" class="jtw-input" placeholder="留空同最小值" min="0" />
-                                </div>
-                            </div>
-                            <div class="jtw-hint">设置范围后，每次询问将在该范围内随机选择数量</div>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -638,7 +650,7 @@ export function renderSettingsPanel() {
         <div id="jtw-aa-result-modal" class="jtw-modal" style="display: none;">
             <div class="jtw-modal-content jtw-aa-result-modal-content">
                 <div class="jtw-modal-header">
-                    <h3>💎 琥珀的回复</h3>
+                    <h3>✨ 琥珀的回复</h3>
                     <button class="jtw-modal-close jtw-aa-close-result">✕</button>
                 </div>
                 <div class="jtw-modal-body">
@@ -775,17 +787,21 @@ export function initSettingsEvents(saveSettings) {
         saveSettings();
     });
     
-    $('#jtw-aa-history-min').val(amberSettings.historyCountMin ?? '').on('change', function() {
-        const val = $(this).val().trim();
-        amberSettings.historyCountMin = val === '' ? null : parseInt(val);
-        saveSettings();
+    // 注入上下文勾选框变化时显示/隐藏层数范围
+    $('#jtw-aa-include-history').on('change', function() {
+        if ($(this).prop('checked')) {
+            $('#jtw-aa-history-range-inline').show();
+        } else {
+            $('#jtw-aa-history-range-inline').hide();
+        }
     });
     
-    $('#jtw-aa-history-max').val(amberSettings.historyCountMax ?? '').on('change', function() {
-        const val = $(this).val().trim();
-        amberSettings.historyCountMax = val === '' ? null : parseInt(val);
-        saveSettings();
-    });
+    // 初始化显示状态
+    if ($('#jtw-aa-include-history').prop('checked')) {
+        $('#jtw-aa-history-range-inline').show();
+    } else {
+        $('#jtw-aa-history-range-inline').hide();
+    }
 }
 
 /**

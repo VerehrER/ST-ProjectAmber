@@ -887,6 +887,42 @@
     gap: 8px;
 }
 
+/* 历史记录行（包含复选框和层数范围） */
+.jtw-aa-history-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 层数范围内联显示 */
+.jtw-aa-history-range-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-left: 24px;
+    font-size: 14px;
+}
+
+.jtw-aa-history-range-inline label {
+    margin: 0;
+    white-space: nowrap;
+}
+
+.jtw-aa-layer-input {
+    width: 80px;
+    padding: 4px 8px;
+    font-size: 13px;
+}
+
+.jtw-aa-history-range-inline span {
+    color: var(--SmartThemeEmColor);
+}
+
+.jtw-aa-history-range-inline .jtw-hint {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
 /* 操作按钮区 */
 .jtw-aa-actions {
     display: flex;
