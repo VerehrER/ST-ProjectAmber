@@ -1174,11 +1174,128 @@ function bindQuickAccessEvents() {
     const $toggle = $panel.find('.jtw-quick-access-toggle');
     const $menu = $panel.find('.jtw-quick-access-menu');
     
-    // 点击切换按钮展开/收起菜单
-    $toggle.on('click', function(e) {
-        e.stopPropagation();
-        $panel.toggleClass('expanded');
-    });
+    // 拖拽相关变量
+    let isDragging = false;
+    let hasMoved = false;
+    let startY = 0;
+    let startTop = 0;
+    let dragStartTime = 0;
+    
+    // 获取容器
+    const getContainer = () => {
+        const $container = $panel.parent();
+        return {
+            height: $container.height(),
+            width: $container.width()
+        };
+    };
+    
+    // 加载保存的位置
+    const settings = getSettings();
+    if (settings.quickAccessPosition) {
+        const pos = settings.quickAccessPosition;
+        $panel.css({
+            top: pos.top !== undefined ? pos.top + 'px' : '',
+            bottom: pos.top !== undefined ? 'auto' : (pos.bottom + 'px'),
+            left: pos.side === 'left' ? '15px' : 'auto',
+            right: pos.side === 'right' ? '15px' : 'auto',
+            transform: 'none'
+        });
+        if (pos.side === 'left') {
+            $panel.addClass('on-left');
+        }
+    }
+    
+    // 开始拖拽
+    const startDrag = (e) => {
+        // 如果菜单已展开，不允许拖拽
+        if ($panel.hasClass('expanded')) return;
+        
+        isDragging = true;
+        hasMoved = false;
+        dragStartTime = Date.now();
+        
+        const clientY = e.type.includes('touch') ? e.originalEvent.touches[0].clientY : e.clientY;
+        startY = clientY;
+        
+        // 获取当前位置
+        const rect = $panel[0].getBoundingClientRect();
+        const containerRect = $panel.parent()[0].getBoundingClientRect();
+        startTop = rect.top - containerRect.top;
+        
+        $panel.addClass('dragging');
+        e.preventDefault();
+    };
+    
+    // 拖拽中
+    const onDrag = (e) => {
+        if (!isDragging) return;
+        
+        const clientY = e.type.includes('touch') ? e.originalEvent.touches[0].clientY : e.clientY;
+        const clientX = e.type.includes('touch') ? e.originalEvent.touches[0].clientX : e.clientX;
+        const deltaY = clientY - startY;
+        
+        // 检测是否移动了足够距离
+        if (Math.abs(deltaY) > 5) {
+            hasMoved = true;
+        }
+        
+        const container = getContainer();
+        const panelHeight = $panel.outerHeight();
+        
+        // 计算新位置，限制在容器内
+        let newTop = startTop + deltaY;
+        newTop = Math.max(10, Math.min(newTop, container.height - panelHeight - 10));
+        
+        // 检测左右侧
+        const containerRect = $panel.parent()[0].getBoundingClientRect();
+        const isOnLeft = clientX < containerRect.left + container.width / 2;
+        
+        $panel.css({
+            top: newTop + 'px',
+            bottom: 'auto',
+            transform: 'none',
+            left: isOnLeft ? '15px' : 'auto',
+            right: isOnLeft ? 'auto' : '15px'
+        });
+        
+        $panel.toggleClass('on-left', isOnLeft);
+        
+        e.preventDefault();
+    };
+    
+    // 结束拖拽
+    const endDrag = (e) => {
+        if (!isDragging) return;
+        isDragging = false;
+        $panel.removeClass('dragging');
+        
+        // 保存位置
+        const rect = $panel[0].getBoundingClientRect();
+        const containerRect = $panel.parent()[0].getBoundingClientRect();
+        const settings = getSettings();
+        settings.quickAccessPosition = {
+            top: rect.top - containerRect.top,
+            side: $panel.hasClass('on-left') ? 'left' : 'right'
+        };
+        saveSettings();
+        
+        // 如果是短暂点击而不是拖拽，切换菜单
+        const dragDuration = Date.now() - dragStartTime;
+        if (!hasMoved && dragDuration < 200) {
+            $panel.toggleClass('expanded');
+        }
+    };
+    
+    // 绑定鼠标事件
+    $toggle.on('mousedown', startDrag);
+    $(document).on('mousemove', onDrag);
+    $(document).on('mouseup', endDrag);
+    
+    // 绑定触摸事件
+    $toggle.on('touchstart', startDrag);
+    $(document).on('touchmove', onDrag);
+    $(document).on('touchend touchcancel', endDrag);
     
     // 点击菜单项
     $panel.find('.jtw-quick-access-item').on('click', function(e) {
