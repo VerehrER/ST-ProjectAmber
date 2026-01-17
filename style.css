@@ -381,14 +381,15 @@
     align-items: center;
     justify-content: center;
     padding: 20px;
-    overflow-y: auto;
+    box-sizing: border-box;
 }
 
 /* 手机端优化 */
 @media (max-width: 768px) {
     .jtw-modal {
         padding: 10px;
-        align-items: flex-start;
+        align-items: center;
+        overflow-y: auto;
     }
 }
 
@@ -402,15 +403,15 @@
     display: flex;
     flex-direction: column;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    margin: auto;
+    box-sizing: border-box;
 }
 
 /* 手机端优化 */
 @media (max-width: 768px) {
     .jtw-modal-content {
-        max-height: 95vh;
-        margin: 10px auto;
+        max-height: 90vh;
         border-radius: 4px;
+        min-height: 0;
     }
 }
 
@@ -608,15 +609,14 @@
     max-width: 1100px;
     width: 95%;
     max-height: 85vh;
-    margin: auto;
 }
 
 /* 手机端优化 */
 @media (max-width: 768px) {
     .jtw-ce-modal-content {
-        width: 100%;
-        max-height: 95vh;
-        margin: 10px auto;
+        width: calc(100% - 20px);
+        max-height: 90vh;
+        min-height: 0;
     }
 }
 
@@ -850,14 +850,13 @@
 .jtw-ce-result-modal-content {
     max-width: 700px;
     width: 90%;
-    margin: auto;
 }
 
 /* 手机端优化 */
 @media (max-width: 768px) {
     .jtw-ce-result-modal-content {
-        width: 100%;
-        margin: 10px auto;
+        width: calc(100% - 20px);
+        min-height: 0;
     }
 }
 
