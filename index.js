@@ -788,6 +788,9 @@ function createSettingsUI() {
         getCharacterWorldbook,
         getAvailableWorldbooks,
         jsonToYaml,
+        loadWorldInfo,
+        saveWorldInfo,
+        power_user,
         EXT_NAME
     });
     
