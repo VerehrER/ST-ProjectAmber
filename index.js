@@ -19,6 +19,7 @@ import { power_user } from "../../../power-user.js";
 
 // 故事助手模块
 import * as StoryAssistant from "./modules/story-assistant/index.js";
+import * as AskAmber from "./modules/story-assistant/ask-amber.js";
 import * as CharacterExtract from "./modules/story-assistant/character-extract.js";
 // 自定义任务模块
 import * as CustomTasks from "./modules/custom-tasks/index.js";
@@ -947,16 +948,21 @@ function initStoryAssistantModule() {
         getCharacterWorldbook,
         loadWorldInfo,
         saveWorldInfo,
+        createWorldInfoEntry,
         jsonToYaml,
         world_names,
         getChatHistory,
         getWorldInfoContent,
+        callLLM,
         callLLMJson,
         power_user
     };
     
     // 初始化故事助手管理器
     StoryAssistant.initStoryAssistant(moduleDependencies);
+    
+    // 注册问问琥珀模块（放在第一位）
+    StoryAssistant.registerModule(AskAmber);
     
     // 注册角色提取模块
     StoryAssistant.registerModule(CharacterExtract);

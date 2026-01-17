@@ -1,0 +1,797 @@
+/**
+ * 问问琥珀功能模块
+ * 与AI助手琥珀进行对话，可选择性注入世界书和上下文
+ */
+
+// 依赖从主模块获取
+let dependencies = null;
+// 保存设置的回调
+let saveSettingsCallback = null;
+
+/**
+ * 初始化模块依赖
+ * @param {object} deps - 依赖对象
+ */
+export function init(deps) {
+    dependencies = deps;
+}
+
+/**
+ * 获取模块元信息
+ */
+export function getModuleInfo() {
+    return {
+        id: 'ask-amber',
+        name: '问问琥珀',
+        description: '与AI助手琥珀对话，获取帮助和建议',
+        icon: '💎'
+    };
+}
+
+/**
+ * HTML 转义
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+/**
+ * 获取默认设置
+ */
+function getDefaultAmberSettings() {
+    return {
+        // 提示词设置
+        promptU1: '你是琥珀，我可爱的女仆，我正在进行角色扮演游戏，现在需要你的帮助。',
+        promptA1: '主人您好，我是琥珀，请问有什么需要帮助的吗？',
+        worldInfoTemplate: `【世界设定】
+<world_info>
+{{description}}
+{{worldInfo}}
+玩家角色：{{user}}
+{{persona}}
+</world_info>`,
+        chatHistoryTemplate: `【历史记录】
+<chat_history>
+{{chatHistory}}
+</chat_history>`,
+        promptA2: '',  // 可选，默认留空
+        // 历史消息范围
+        historyCountMin: null,   // null 表示使用全局设置
+        historyCountMax: null,   // null 表示与 min 相同
+        // 世界书结果默认设置
+        worldbookDefaults: {
+            entryName: '',
+            entryKeys: '',
+            entryConstant: false,
+            entryPosition: 0,
+            entryDepth: 4,
+            entryOrder: 100
+        }
+    };
+}
+
+/**
+ * 获取当前琥珀设置
+ */
+function getAmberSettings() {
+    const { getSettings, defaultSettings } = dependencies;
+    const settings = getSettings();
+    
+    if (!settings.askAmber) {
+        settings.askAmber = getDefaultAmberSettings();
+    }
+    
+    return settings.askAmber;
+}
+
+/**
+ * 构建对话消息
+ * @param {string} userQuestion - 用户的问题
+ * @param {object} options - 选项（是否注入世界书、上下文等）
+ * @returns {Promise<Array>}
+ */
+async function buildMessages(userQuestion, options = {}) {
+    const { getSettings, getContext, getChatHistory, getWorldInfoContent, power_user } = dependencies;
+    const settings = getSettings();
+    const amberSettings = getAmberSettings();
+    
+    const ctx = getContext();
+    const char = ctx.characters?.[ctx.characterId];
+    const description = char?.description || char?.data?.description || '';
+    const persona = power_user?.persona_description || '';
+    const userName = ctx.name1 || '{{user}}';
+    const charName = char?.name || ctx.name2 || '{{char}}';
+    
+    // 变量替换函数
+    const replaceVars = (template) => {
+        return template
+            .replace(/\{\{user\}\}/g, userName)
+            .replace(/\{\{char\}\}/g, charName)
+            .replace(/\{\{description\}\}/g, description)
+            .replace(/\{\{persona\}\}/g, persona);
+    };
+    
+    const messages = [];
+    
+    // User 消息 1
+    messages.push({
+        role: 'user',
+        content: replaceVars(amberSettings.promptU1 || getDefaultAmberSettings().promptU1)
+    });
+    
+    // Assistant 消息 1
+    messages.push({
+        role: 'assistant',
+        content: replaceVars(amberSettings.promptA1 || getDefaultAmberSettings().promptA1)
+    });
+    
+    // 构建 User 消息 2（用户问题 + 可选的世界书和上下文）
+    let user2Parts = [];
+    
+    // 如果注入世界书
+    if (options.includeWorldInfo) {
+        const worldInfo = await getWorldInfoContent();
+        let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
+        worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
+        user2Parts.push(worldInfoContent);
+    }
+    
+    // 如果注入上下文
+    if (options.includeChatHistory) {
+        // 计算历史消息数量
+        let historyCount;
+        const minCount = amberSettings.historyCountMin;
+        const maxCount = amberSettings.historyCountMax;
+        
+        if (minCount !== null && minCount !== undefined && minCount !== '') {
+            const min = parseInt(minCount);
+            const max = maxCount !== null && maxCount !== undefined && maxCount !== '' 
+                ? parseInt(maxCount) 
+                : min;
+            
+            // 在范围内随机选择
+            if (max > min) {
+                historyCount = Math.floor(Math.random() * (max - min + 1)) + min;
+            } else {
+                historyCount = min;
+            }
+        } else {
+            // 使用全局设置
+            historyCount = settings.historyCount || 50;
+        }
+        
+        const chatHistory = getChatHistory(historyCount);
+        let chatHistoryContent = amberSettings.chatHistoryTemplate || getDefaultAmberSettings().chatHistoryTemplate;
+        chatHistoryContent = replaceVars(chatHistoryContent).replace(/\{\{chatHistory\}\}/g, chatHistory);
+        user2Parts.push(chatHistoryContent);
+    }
+    
+    // 添加用户问题
+    user2Parts.push(userQuestion);
+    
+    messages.push({
+        role: 'user',
+        content: user2Parts.join('\n\n')
+    });
+    
+    // 如果有 Assistant 消息 2（可选）
+    if (amberSettings.promptA2 && amberSettings.promptA2.trim()) {
+        messages.push({
+            role: 'assistant',
+            content: replaceVars(amberSettings.promptA2)
+        });
+    }
+    
+    return messages;
+}
+
+/**
+ * 获取完整提示词预览
+ * @param {string} userQuestion - 用户的问题
+ * @param {object} options - 选项
+ * @returns {Promise<Array>}
+ */
+async function getPromptPreview(userQuestion, options = {}) {
+    return buildMessages(userQuestion, options);
+}
+
+/**
+ * 调用 AI 获取回复
+ * @param {string} userQuestion - 用户的问题
+ * @param {object} options - 选项
+ * @returns {Promise<string>}
+ */
+async function askAmber(userQuestion, options = {}) {
+    const { callLLM } = dependencies;
+    
+    const messages = await buildMessages(userQuestion, options);
+    
+    // 调用 LLM（不需要 JSON 解析）
+    const response = await callLLM(messages);
+    
+    return response;
+}
+
+/**
+ * 显示主弹窗
+ */
+export function showModal() {
+    $('#jtw-ask-amber-modal').fadeIn(200);
+    switchTab('chat');
+    
+    // 清空上次的输入和结果
+    // $('#jtw-aa-question').val('');
+}
+
+/**
+ * 隐藏主弹窗
+ */
+function hideModal() {
+    $('#jtw-ask-amber-modal').fadeOut(200);
+}
+
+/**
+ * 切换标签页
+ */
+function switchTab(tabName) {
+    $('.jtw-aa-tab').removeClass('active');
+    $(`.jtw-aa-tab[data-tab="${tabName}"]`).addClass('active');
+    $('.jtw-aa-tab-content').removeClass('active');
+    $(`#jtw-aa-tab-${tabName}`).addClass('active');
+}
+
+/**
+ * 显示提示词预览弹窗
+ */
+async function showPromptPreviewModal() {
+    const question = $('#jtw-aa-question').val().trim() || '（请输入您的问题）';
+    const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
+    const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
+    
+    const $container = $('#jtw-aa-prompt-preview-content');
+    $container.html('<div class="jtw-ce-loading">加载中...</div>');
+    $('#jtw-aa-prompt-preview-modal').fadeIn(200);
+    
+    try {
+        const messages = await getPromptPreview(question, {
+            includeWorldInfo,
+            includeChatHistory
+        });
+        
+        const htmlContent = messages
+            .filter(m => m.content)
+            .map((msg, idx) => {
+                const roleLabel = msg.role === 'user' ? 'User' : 'Assistant';
+                const roleClass = msg.role === 'user' ? 'user' : 'assistant';
+                return `
+                    <div class="jtw-prompt-message jtw-prompt-${roleClass}">
+                        <div class="jtw-prompt-role">${roleLabel}</div>
+                        <div class="jtw-prompt-content">${escapeHtml(msg.content)}</div>
+                    </div>
+                `;
+            }).join('');
+        
+        $container.html(htmlContent || '<div class="jtw-ce-empty">没有提示词内容</div>');
+    } catch (e) {
+        $container.html(`<div class="jtw-ce-error">加载失败: ${escapeHtml(e.message)}</div>`);
+    }
+}
+
+/**
+ * 隐藏提示词预览弹窗
+ */
+function hidePromptPreviewModal() {
+    $('#jtw-aa-prompt-preview-modal').fadeOut(200);
+}
+
+/**
+ * 执行询问
+ */
+async function runAsk() {
+    const question = $('#jtw-aa-question').val().trim();
+    
+    if (!question) {
+        showStatus('请输入您的问题', true);
+        return;
+    }
+    
+    const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
+    const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
+    
+    const $btn = $('#jtw-aa-run');
+    const $status = $('#jtw-aa-status');
+    
+    $btn.prop('disabled', true).text('琥珀思考中...');
+    $status.text('正在向琥珀提问...').removeClass('error').addClass('success').show();
+    
+    try {
+        const response = await askAmber(question, {
+            includeWorldInfo,
+            includeChatHistory
+        });
+        
+        if (!response) {
+            showStatus('琥珀没有回复', true);
+            return;
+        }
+        
+        // 显示结果弹窗
+        showResultModal(response);
+        $status.hide();
+        
+    } catch (e) {
+        console.error('[问问琥珀] 询问失败:', e);
+        showStatus(`询问失败: ${e.message}`, true);
+    } finally {
+        $btn.prop('disabled', false).text('询问一下');
+    }
+}
+
+/**
+ * 显示结果确认弹窗
+ */
+function showResultModal(response) {
+    const amberSettings = getAmberSettings();
+    const defaults = amberSettings.worldbookDefaults || {};
+    
+    $('#jtw-aa-result-content').val(response);
+    
+    // 填充世界书设置默认值
+    $('#jtw-aa-result-entry-name').val(defaults.entryName || '');
+    $('#jtw-aa-result-entry-keys').val(defaults.entryKeys || '');
+    $('#jtw-aa-result-entry-constant').prop('checked', defaults.entryConstant || false);
+    $('#jtw-aa-result-entry-position').val(defaults.entryPosition ?? 0);
+    $('#jtw-aa-result-entry-depth').val(defaults.entryDepth ?? 4);
+    $('#jtw-aa-result-entry-order').val(defaults.entryOrder ?? 100);
+    
+    // 显示/隐藏深度
+    if (parseInt($('#jtw-aa-result-entry-position').val()) === 4) {
+        $('#jtw-aa-result-depth-container').show();
+    } else {
+        $('#jtw-aa-result-depth-container').hide();
+    }
+    
+    $('#jtw-aa-result-modal').fadeIn(200);
+}
+
+/**
+ * 隐藏结果弹窗
+ */
+function hideResultModal() {
+    $('#jtw-aa-result-modal').fadeOut(200);
+}
+
+/**
+ * 复制结果到剪贴板
+ */
+async function copyResult() {
+    const content = $('#jtw-aa-result-content').val();
+    const $status = $('#jtw-aa-result-status');
+    
+    try {
+        await navigator.clipboard.writeText(content);
+        $status.text('已复制到剪贴板').removeClass('error').addClass('success').show();
+        setTimeout(() => $status.fadeOut(), 2000);
+    } catch (e) {
+        $status.text('复制失败').removeClass('success').addClass('error').show();
+        setTimeout(() => $status.fadeOut(), 2000);
+    }
+}
+
+/**
+ * 保存结果到世界书
+ */
+async function saveResultToWorldbook() {
+    const { getSettings, getCharacterWorldbook, loadWorldInfo, saveWorldInfo, createWorldInfoEntry, world_names } = dependencies;
+    
+    const content = $('#jtw-aa-result-content').val().trim();
+    
+    if (!content) {
+        showResultStatus('没有可保存的内容', true);
+        return;
+    }
+    
+    // 获取世界书设置
+    const entryName = $('#jtw-aa-result-entry-name').val().trim();
+    const entryKeys = $('#jtw-aa-result-entry-keys').val().trim();
+    const entryConstant = $('#jtw-aa-result-entry-constant').prop('checked');
+    const entryPosition = parseInt($('#jtw-aa-result-entry-position').val());
+    const entryDepthVal = $('#jtw-aa-result-entry-depth').val();
+    const entryDepth = entryDepthVal === '' ? 4 : parseInt(entryDepthVal);
+    const entryOrderVal = $('#jtw-aa-result-entry-order').val();
+    const entryOrder = entryOrderVal === '' ? 100 : parseInt(entryOrderVal);
+    
+    if (!entryName) {
+        showResultStatus('请输入条目名称', true);
+        return;
+    }
+    
+    const $saveBtn = $('#jtw-aa-result-save-wb');
+    $saveBtn.prop('disabled', true).text('保存中...');
+    
+    try {
+        const settings = getSettings();
+        let targetBook = settings.targetWorldbook || getCharacterWorldbook();
+        
+        if (!targetBook || !world_names?.includes(targetBook)) {
+            throw new Error('未找到有效的世界书');
+        }
+        
+        const worldData = await loadWorldInfo(targetBook);
+        if (!worldData) {
+            throw new Error('无法加载世界书');
+        }
+        
+        // 查找或创建条目
+        let entry = null;
+        let isUpdate = false;
+        
+        if (worldData.entries && typeof worldData.entries === 'object') {
+            const entriesArray = Object.values(worldData.entries);
+            entry = entriesArray.find(e => e && e.comment === entryName);
+            if (entry) {
+                isUpdate = true;
+            }
+        }
+        
+        if (!entry) {
+            entry = createWorldInfoEntry(targetBook, worldData);
+            if (!entry) {
+                throw new Error('创建条目失败');
+            }
+        }
+        
+        // 设置条目属性
+        Object.assign(entry, {
+            comment: entryName,
+            content: content,
+            key: entryKeys ? entryKeys.split(',').map(k => k.trim()) : [entryName],
+            constant: entryConstant,
+            selective: true,
+            disable: false,
+            position: entryPosition,
+            depth: entryPosition === 4 ? entryDepth : undefined,
+            order: entryOrder
+        });
+        
+        await saveWorldInfo(targetBook, worldData, true);
+        
+        // 保存世界书默认设置
+        const amberSettings = getAmberSettings();
+        amberSettings.worldbookDefaults = {
+            entryName,
+            entryKeys,
+            entryConstant,
+            entryPosition,
+            entryDepth,
+            entryOrder
+        };
+        saveSettingsCallback();
+        
+        showResultStatus(`已${isUpdate ? '更新' : '保存'}到世界书`, false);
+        
+        setTimeout(() => {
+            hideResultModal();
+        }, 1500);
+        
+    } catch (e) {
+        console.error('[问问琥珀] 保存失败:', e);
+        showResultStatus(`保存失败: ${e.message}`, true);
+    } finally {
+        $saveBtn.prop('disabled', false).text('保存到世界书');
+    }
+}
+
+/**
+ * 显示状态消息
+ */
+function showStatus(message, isError = false) {
+    const $status = $('#jtw-aa-status');
+    $status.text(message)
+        .removeClass('success error')
+        .addClass(isError ? 'error' : 'success')
+        .show();
+    
+    setTimeout(() => $status.fadeOut(), 5000);
+}
+
+/**
+ * 显示结果弹窗状态
+ */
+function showResultStatus(message, isError = false) {
+    const $status = $('#jtw-aa-result-status');
+    $status.text(message)
+        .removeClass('success error')
+        .addClass(isError ? 'error' : 'success')
+        .show();
+    
+    setTimeout(() => $status.fadeOut(), 5000);
+}
+
+/**
+ * 渲染设置面板 HTML
+ */
+export function renderSettingsPanel() {
+    return `
+        <div class="jtw-assistant-feature-content" id="jtw-ask-amber-settings" style="display: none;">
+            <!-- 占位，实际功能在弹窗中 -->
+        </div>
+        
+        <!-- 问问琥珀主弹窗 -->
+        <div id="jtw-ask-amber-modal" class="jtw-modal" style="display: none;">
+            <div class="jtw-modal-content jtw-aa-modal-content">
+                <div class="jtw-modal-header">
+                    <h3>💎 问问琥珀</h3>
+                    <button class="jtw-modal-close jtw-aa-close-modal">✕</button>
+                </div>
+                
+                <!-- 标签页导航 -->
+                <div class="jtw-ce-tabs">
+                    <button class="jtw-aa-tab active" data-tab="chat">互动</button>
+                    <button class="jtw-aa-tab" data-tab="settings">设置</button>
+                </div>
+                
+                <div class="jtw-modal-body">
+                    <!-- 互动页 -->
+                    <div class="jtw-aa-tab-content active" id="jtw-aa-tab-chat">
+                        <div class="jtw-aa-greeting">
+                            <div class="jtw-aa-greeting-avatar">💎</div>
+                            <div class="jtw-aa-greeting-text">主人您好，我是琥珀，请问有什么需要帮助的吗？</div>
+                        </div>
+                        
+                        <div class="jtw-section">
+                            <label>您的问题</label>
+                            <textarea id="jtw-aa-question" class="jtw-input" rows="6" placeholder="请输入您想问琥珀的问题..."></textarea>
+                        </div>
+                        
+                        <div class="jtw-section">
+                            <h4>注入选项</h4>
+                            <div class="jtw-aa-options">
+                                <div class="jtw-checkbox-row">
+                                    <input type="checkbox" id="jtw-aa-include-worldinfo" checked />
+                                    <label for="jtw-aa-include-worldinfo">注入世界书内容</label>
+                                </div>
+                                <div class="jtw-checkbox-row">
+                                    <input type="checkbox" id="jtw-aa-include-history" checked />
+                                    <label for="jtw-aa-include-history">注入上下文（聊天历史）</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="jtw-aa-actions">
+                            <button id="jtw-aa-run" class="jtw-btn primary jtw-aa-run-btn">询问一下</button>
+                            <button id="jtw-aa-preview-prompt" class="jtw-btn jtw-aa-preview-btn">📋 预览完整提示词</button>
+                        </div>
+                        
+                        <div id="jtw-aa-status" class="jtw-status" style="display: none;"></div>
+                    </div>
+                    
+                    <!-- 设置页 -->
+                    <div class="jtw-aa-tab-content" id="jtw-aa-tab-settings">
+                        <div class="jtw-section">
+                            <h4>提示词设置</h4>
+                            <div style="margin-bottom: 10px;">
+                                <label>User 消息 1</label>
+                                <textarea id="jtw-aa-prompt-u1" class="jtw-input" rows="2" placeholder="你是琥珀，我可爱的女仆..."></textarea>
+                            </div>
+                            <div style="margin-bottom: 10px;">
+                                <label>Assistant 消息 1</label>
+                                <textarea id="jtw-aa-prompt-a1" class="jtw-input" rows="2" placeholder="主人您好，我是琥珀..."></textarea>
+                            </div>
+                        </div>
+                        
+                        <div class="jtw-section">
+                            <h4>世界书内容模板</h4>
+                            <textarea id="jtw-aa-worldinfo-template" class="jtw-input" rows="6" placeholder="【世界设定】..."></textarea>
+                            <div class="jtw-hint">可用变量: {{description}}, {{worldInfo}}, {{user}}, {{char}}, {{persona}}</div>
+                        </div>
+                        
+                        <div class="jtw-section">
+                            <h4>上下文内容模板</h4>
+                            <textarea id="jtw-aa-history-template" class="jtw-input" rows="4" placeholder="【历史记录】..."></textarea>
+                            <div class="jtw-hint">可用变量: {{chatHistory}}</div>
+                        </div>
+                        
+                        <div class="jtw-section">
+                            <h4>Assistant 消息 2（可选）</h4>
+                            <textarea id="jtw-aa-prompt-a2" class="jtw-input" rows="1" placeholder="留空则省略此消息"></textarea>
+                        </div>
+                        
+                        <div class="jtw-section">
+                            <h4>历史消息数量</h4>
+                            <div class="jtw-aa-history-range">
+                                <div>
+                                    <label>最小值（留空使用全局设置）</label>
+                                    <input type="number" id="jtw-aa-history-min" class="jtw-input" placeholder="留空使用全局" min="0" />
+                                </div>
+                                <span class="jtw-aa-range-separator">~</span>
+                                <div>
+                                    <label>最大值（留空与最小值相同）</label>
+                                    <input type="number" id="jtw-aa-history-max" class="jtw-input" placeholder="留空同最小值" min="0" />
+                                </div>
+                            </div>
+                            <div class="jtw-hint">设置范围后，每次询问将在该范围内随机选择数量</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 提示词预览弹窗 -->
+        <div id="jtw-aa-prompt-preview-modal" class="jtw-modal" style="display: none;">
+            <div class="jtw-modal-content jtw-ce-prompt-modal-content">
+                <div class="jtw-modal-header">
+                    <h3>📋 完整提示词预览</h3>
+                    <button class="jtw-modal-close jtw-aa-close-preview">✕</button>
+                </div>
+                <div class="jtw-modal-body">
+                    <div id="jtw-aa-prompt-preview-content" class="jtw-ce-prompt-preview">
+                        <div class="jtw-ce-loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 结果确认弹窗 -->
+        <div id="jtw-aa-result-modal" class="jtw-modal" style="display: none;">
+            <div class="jtw-modal-content jtw-aa-result-modal-content">
+                <div class="jtw-modal-header">
+                    <h3>💎 琥珀的回复</h3>
+                    <button class="jtw-modal-close jtw-aa-close-result">✕</button>
+                </div>
+                <div class="jtw-modal-body">
+                    <textarea id="jtw-aa-result-content" class="jtw-ce-textarea" rows="12" placeholder="琥珀的回复..."></textarea>
+                    
+                    <div class="jtw-aa-result-actions-row">
+                        <button id="jtw-aa-result-copy" class="jtw-btn">📋 一键复制</button>
+                    </div>
+                    
+                    <div class="jtw-section" style="margin-top: 15px;">
+                        <h4>保存到世界书（可选）</h4>
+                        <div style="margin-bottom: 10px;">
+                            <label>条目名称</label>
+                            <input type="text" id="jtw-aa-result-entry-name" class="jtw-input" placeholder="条目名称" />
+                        </div>
+                        <div style="margin-bottom: 10px;">
+                            <label>关键词（逗号分隔）</label>
+                            <input type="text" id="jtw-aa-result-entry-keys" class="jtw-input" placeholder="关键词1,关键词2" />
+                        </div>
+                        <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                            <input type="checkbox" id="jtw-aa-result-entry-constant" />
+                            <label for="jtw-aa-result-entry-constant">始终启用（Constant）</label>
+                        </div>
+                        <div style="display: flex; gap: 10px;">
+                            <div style="flex: 1;">
+                                <label>条目位置</label>
+                                <select id="jtw-aa-result-entry-position" class="jtw-select">
+                                    <option value="0">角色定义之前</option>
+                                    <option value="1">角色定义之后</option>
+                                    <option value="2">作者注释之前</option>
+                                    <option value="3">作者注释之后</option>
+                                    <option value="4">@ Depth</option>
+                                </select>
+                            </div>
+                            <div id="jtw-aa-result-depth-container" style="flex: 1; display: none;">
+                                <label>深度</label>
+                                <input type="number" id="jtw-aa-result-entry-depth" class="jtw-input" value="4" min="0" />
+                            </div>
+                            <div style="flex: 1;">
+                                <label>排序</label>
+                                <input type="number" id="jtw-aa-result-entry-order" class="jtw-input" value="100" min="0" />
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="jtw-aa-result-status" class="jtw-status" style="display: none;"></div>
+                </div>
+                <div class="jtw-modal-footer">
+                    <button class="jtw-btn jtw-aa-close-result">关闭</button>
+                    <button id="jtw-aa-result-save-wb" class="jtw-btn primary">保存到世界书</button>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * 初始化事件绑定
+ */
+export function initSettingsEvents(saveSettings) {
+    saveSettingsCallback = saveSettings;
+    
+    const amberSettings = getAmberSettings();
+    const defaults = getDefaultAmberSettings();
+    
+    // 关闭主弹窗
+    $('.jtw-aa-close-modal').on('click', hideModal);
+    $('#jtw-ask-amber-modal').on('click', function(e) {
+        if (e.target === this) hideModal();
+    });
+    
+    // 关闭提示词预览弹窗
+    $('.jtw-aa-close-preview').on('click', hidePromptPreviewModal);
+    $('#jtw-aa-prompt-preview-modal').on('click', function(e) {
+        if (e.target === this) hidePromptPreviewModal();
+    });
+    
+    // 关闭结果弹窗
+    $('.jtw-aa-close-result').on('click', hideResultModal);
+    $('#jtw-aa-result-modal').on('click', function(e) {
+        if (e.target === this) hideResultModal();
+    });
+    
+    // 标签页切换
+    $('.jtw-aa-tab').on('click', function() {
+        const tab = $(this).data('tab');
+        switchTab(tab);
+    });
+    
+    // 运行询问
+    $('#jtw-aa-run').on('click', runAsk);
+    
+    // 预览提示词
+    $('#jtw-aa-preview-prompt').on('click', showPromptPreviewModal);
+    
+    // 复制结果
+    $('#jtw-aa-result-copy').on('click', copyResult);
+    
+    // 保存到世界书
+    $('#jtw-aa-result-save-wb').on('click', saveResultToWorldbook);
+    
+    // 结果弹窗位置变化时显示/隐藏深度
+    $('#jtw-aa-result-entry-position').on('change', function() {
+        if (parseInt($(this).val()) === 4) {
+            $('#jtw-aa-result-depth-container').show();
+        } else {
+            $('#jtw-aa-result-depth-container').hide();
+        }
+    });
+    
+    // 设置页面字段初始化和保存
+    $('#jtw-aa-prompt-u1').val(amberSettings.promptU1 || defaults.promptU1).on('change', function() {
+        amberSettings.promptU1 = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-aa-prompt-a1').val(amberSettings.promptA1 || defaults.promptA1).on('change', function() {
+        amberSettings.promptA1 = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-aa-worldinfo-template').val(amberSettings.worldInfoTemplate || defaults.worldInfoTemplate).on('change', function() {
+        amberSettings.worldInfoTemplate = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-aa-history-template').val(amberSettings.chatHistoryTemplate || defaults.chatHistoryTemplate).on('change', function() {
+        amberSettings.chatHistoryTemplate = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-aa-prompt-a2').val(amberSettings.promptA2 || '').on('change', function() {
+        amberSettings.promptA2 = $(this).val();
+        saveSettings();
+    });
+    
+    $('#jtw-aa-history-min').val(amberSettings.historyCountMin ?? '').on('change', function() {
+        const val = $(this).val().trim();
+        amberSettings.historyCountMin = val === '' ? null : parseInt(val);
+        saveSettings();
+    });
+    
+    $('#jtw-aa-history-max').val(amberSettings.historyCountMax ?? '').on('change', function() {
+        const val = $(this).val().trim();
+        amberSettings.historyCountMax = val === '' ? null : parseInt(val);
+        saveSettings();
+    });
+}
+
+/**
+ * 模块被点击时的处理
+ */
+export function onModuleClick() {
+    showModal();
+    return false;
+}

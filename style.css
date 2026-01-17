@@ -845,3 +845,124 @@
     max-height: 400px;
     overflow-y: auto;
 }
+
+/* ==================== 问问琥珀模块样式 ==================== */
+
+/* 主弹窗 */
+.jtw-aa-modal-content {
+    max-width: 900px;
+    width: 95%;
+}
+
+/* 问候语 */
+.jtw-aa-greeting {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 20px;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1));
+    border: 1px solid rgba(255, 193, 7, 0.3);
+    border-radius: 12px;
+    margin-bottom: 20px;
+}
+
+.jtw-aa-greeting-avatar {
+    font-size: 48px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+}
+
+.jtw-aa-greeting-text {
+    flex: 1;
+    font-size: 16px;
+    color: var(--SmartThemeBodyColor);
+    line-height: 1.6;
+    padding-top: 8px;
+}
+
+/* 注入选项 */
+.jtw-aa-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 操作按钮区 */
+.jtw-aa-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.jtw-aa-run-btn {
+    width: 200px;
+    padding: 12px 24px !important;
+    font-size: 16px;
+}
+
+.jtw-aa-preview-btn {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+/* 历史消息范围 */
+.jtw-aa-history-range {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
+.jtw-aa-history-range > div {
+    flex: 1;
+}
+
+.jtw-aa-range-separator {
+    padding-bottom: 10px;
+    font-size: 18px;
+    color: var(--SmartThemeEmColor);
+}
+
+/* 结果弹窗 */
+.jtw-aa-result-modal-content {
+    max-width: 800px;
+    width: 95%;
+}
+
+.jtw-aa-result-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+}
+
+/* 标签页样式复用 */
+.jtw-aa-tab {
+    padding: 10px 20px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    color: var(--SmartThemeBodyColor);
+    font-size: 14px;
+    transition: all 0.2s;
+    opacity: 0.6;
+}
+
+.jtw-aa-tab:hover {
+    opacity: 0.8;
+    background: var(--SmartThemeBlurTintColor);
+}
+
+.jtw-aa-tab.active {
+    opacity: 1;
+    border-bottom-color: var(--SmartThemeChatTintColor);
+}
+
+.jtw-aa-tab-content {
+    display: none;
+}
+
+.jtw-aa-tab-content.active {
+    display: block;
+}
