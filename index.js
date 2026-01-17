@@ -323,6 +323,9 @@ async function getWorldInfoContent() {
         
         if (activeEntries.length === 0) return '';
         
+        // 按 order 升序排序（order 越小越靠前，在提示词顶部）
+        activeEntries.sort((a, b) => (a.order || 0) - (b.order || 0));
+        
         // 格式化为文本
         const lines = activeEntries.map(e => {
             const keys = Array.isArray(e.key) ? e.key.join(', ') : e.key;
