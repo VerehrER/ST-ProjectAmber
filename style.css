@@ -843,6 +843,6 @@
 
 .jtw-ce-prompt-preview .jtw-prompt-content {
     /* 移除固定高度限制，让内容完整显示 */
-    /* max-height: 300px; */
+    max-height: 300px;
     overflow-y: visible;
 }
