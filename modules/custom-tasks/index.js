@@ -253,7 +253,7 @@ function getParallelTaskFromForm() {
  * 保存并行任务
  */
 function saveParallelTask() {
-    const { getSettings, saveSettings } = dependencies;
+    const { getSettings } = dependencies;
     const settings = getSettings();
     if (!settings.customTasks) {
         settings.customTasks = [];
@@ -282,7 +282,7 @@ function saveParallelTask() {
         settings.customTasks.push(newTask);
     }
     
-    saveSettings();
+    saveSettingsCallback();
     showTaskListView();
     showTaskStatus(editingTaskIndex >= 0 ? '并行注入已更新' : '并行注入已创建');
     editingTaskIndex = -1;
@@ -292,7 +292,7 @@ function saveParallelTask() {
  * 切换并行任务启用状态
  */
 function toggleParallelTask(index, enabled) {
-    const { getSettings, saveSettings } = dependencies;
+    const { getSettings } = dependencies;
     const settings = getSettings();
     if (!settings.customTasks || index < 0 || index >= settings.customTasks.length) {
         return;
@@ -303,7 +303,7 @@ function toggleParallelTask(index, enabled) {
     
     task.enabled = enabled;
     task.updatedAt = Date.now();
-    saveSettings();
+    saveSettingsCallback();
     
     showTaskStatus(enabled ? `已启用: ${task.name}` : `已禁用: ${task.name}`);
 }
@@ -325,7 +325,7 @@ function getTaskFromForm() {
  * 保存任务
  */
 function saveTask() {
-    const { getSettings, saveSettings } = dependencies;
+    const { getSettings } = dependencies;
     const settings = getSettings();
     if (!settings.customTasks) {
         settings.customTasks = [];
@@ -350,7 +350,7 @@ function saveTask() {
         settings.customTasks.push(newTask);
     }
     
-    saveSettings();
+    saveSettingsCallback();
     showTaskListView();
     showTaskStatus(editingTaskIndex >= 0 ? '任务已更新' : '任务已创建');
     editingTaskIndex = -1;
@@ -360,7 +360,7 @@ function saveTask() {
  * 删除任务
  */
 function deleteTask(index) {
-    const { getSettings, saveSettings } = dependencies;
+    const { getSettings } = dependencies;
     const settings = getSettings();
     if (!settings.customTasks || index < 0 || index >= settings.customTasks.length) {
         return;
@@ -372,7 +372,7 @@ function deleteTask(index) {
     }
     
     settings.customTasks.splice(index, 1);
-    saveSettings();
+    saveSettingsCallback();
     renderTaskList();
     showTaskStatus('任务已删除');
 }
@@ -411,7 +411,7 @@ function exportTask(index) {
  * 导入任务
  */
 function importTasks() {
-    const { getSettings, saveSettings, EXT_NAME } = dependencies;
+    const { getSettings, EXT_NAME } = dependencies;
     
     const input = document.createElement('input');
     input.type = 'file';
@@ -453,7 +453,7 @@ function importTasks() {
         }
         
         if (importedCount > 0) {
-            saveSettings();
+            saveSettingsCallback();
             renderTaskList();
             showTaskStatus(`成功导入 ${importedCount} 个任务`);
         } else {
