@@ -1246,8 +1246,8 @@ function bindQuickAccessEvents() {
         // 计算新位置，限制在容器可视范围内
         // limit bounds relative to current scroll view
         let newTop = startTop + deltaY;
-        const minTop = scrollTop + 10;
-        const maxTop = scrollTop + container.height - panelHeight - 100;
+        const minTop = scrollTop - 50;
+        const maxTop = scrollTop + container.height - panelHeight + 50;
         
         newTop = Math.max(minTop, Math.min(newTop, maxTop));
         
