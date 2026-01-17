@@ -239,13 +239,17 @@ function showParallelTaskEditView(task, isNew = true) {
  * 从并行任务表单获取数据
  */
 function getParallelTaskFromForm() {
+    const depthValue = $('#jtw-parallel-task-depth').val();
+    // const intervalValue = $('#jtw-parallel-task-interval').val();
+    
     return {
         name: $('#jtw-parallel-task-name').val().trim(),
         prompt: $('#jtw-parallel-task-prompt').val(),
         position: $('#jtw-parallel-task-position').val(),
-        depth: parseInt($('#jtw-parallel-task-depth').val()) || 4,
+        depth: depthValue === '' ? 4 : parseInt(depthValue),
         role: $('#jtw-parallel-task-role').val() || 'system',
         interval: parseInt($('#jtw-parallel-task-interval').val()) || 0
+        // interval: intervalValue === '' ? 0 : parseInt(intervalValue)
     };
 }
 
@@ -762,8 +766,10 @@ async function saveTaskResult() {
     const entryKeys = $('#jtw-task-result-entry-keys').val().trim();
     const entryConstant = $('#jtw-task-result-entry-constant').prop('checked');
     const entryPosition = parseInt($('#jtw-task-result-entry-position').val());
-    const entryDepth = parseInt($('#jtw-task-result-entry-depth').val()) || 4;
-    const entryOrder = parseInt($('#jtw-task-result-entry-order').val()) || 100;
+    const entryDepthValue = $('#jtw-task-result-entry-depth').val();
+    const entryDepth = entryDepthValue === '' ? 4 : parseInt(entryDepthValue);
+    const entryOrderValue = $('#jtw-task-result-entry-order').val();
+    const entryOrder = entryOrderValue === '' ? 100 : parseInt(entryOrderValue);
     
     if (!entryName) {
         $status.text('请输入条目名称').removeClass('success').addClass('error').show();
