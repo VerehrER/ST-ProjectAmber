@@ -56,7 +56,7 @@ function getDefaultAmberSettings() {
 <chat_history>
 {{chatHistory}}
 </chat_history>`,
-        promptA2: '',  // 可选，默认留空
+        promptA2: '了解！琥珀马上为您服务：',
         // 世界书结果默认设置
         worldbookDefaults: {
             entryName: '',
@@ -204,7 +204,7 @@ async function buildMessages(userQuestion, options = {}) {
         content: user2Parts.join('\n\n')
     });
     
-    // 如果有 Assistant 消息 2（可选）
+    // 如果有 Assistant 消息 2
     if (amberSettings.promptA2 && amberSettings.promptA2.trim()) {
         messages.push({
             role: 'assistant',
@@ -652,7 +652,7 @@ export function renderSettingsPanel() {
                         </div>
                         
                         <div class="jtw-section">
-                            <h4>Assistant 消息 2（可选）</h4>
+                            <h4>Assistant 消息 2</h4>
                             <textarea id="jtw-aa-prompt-a2" class="jtw-input" rows="1" placeholder="留空则省略此消息"></textarea>
                         </div>
                     </div>
