@@ -94,13 +94,6 @@ async function buildMessages(userQuestion, options = {}) {
     const settings = getSettings();
     const amberSettings = getAmberSettings();
     
-    // 调试日志：输出选项
-    console.log('[问问琥珀] buildMessages 选项:', {
-        includeWorldInfo: options.includeWorldInfo,
-        worldInfoActivatedOnly: options.worldInfoActivatedOnly,
-        includeChatHistory: options.includeChatHistory
-    });
-    
     // 检查用户问题是否为空，防止误操作
     if (!userQuestion || !userQuestion.trim()) {
         throw new Error('请输入您的问题');
@@ -141,11 +134,11 @@ async function buildMessages(userQuestion, options = {}) {
     
     // 如果注入世界书
     if (options.includeWorldInfo) {
-        // 根据选项决定是获取全部条目还是仅激活的条目
-        console.log('[问问琥珀] 调用 getWorldInfoContent，activatedOnly:', options.worldInfoActivatedOnly);
-        const worldInfo = await getWorldInfoContent({ activatedOnly: options.worldInfoActivatedOnly });
-        console.log('[问问琥珀] 获取到的世界书内容长度:', worldInfo.length, '字符');
-        console.log('[问问琥珀] 世界书内容预览:', worldInfo.substring(0, 200));
+        // 根据选项决定是获取全部条目还是仅激活的条目，以及是否刷新激活状态
+        const worldInfo = await getWorldInfoContent({ 
+            activatedOnly: options.worldInfoActivatedOnly,
+            refreshActivation: options.worldInfoRefreshActivation
+        });
         let worldInfoContent = amberSettings.worldInfoTemplate || getDefaultAmberSettings().worldInfoTemplate;
         worldInfoContent = replaceVars(worldInfoContent).replace(/\{\{worldInfo\}\}/g, worldInfo);
         user2Parts.push(worldInfoContent);
@@ -308,17 +301,10 @@ async function showPromptPreviewModal() {
     const question = $('#jtw-aa-question').val().trim() || '（请输入您的问题）';
     const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
     const worldInfoActivatedOnly = $('input[name="jtw-aa-worldinfo-mode"]:checked').val() === 'activated';
+    const worldInfoRefreshActivation = $('#jtw-aa-worldinfo-refresh').prop('checked');
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
-    
-    console.log('[问问琥珀] 预览弹窗选项:', {
-        includeWorldInfo,
-        worldInfoActivatedOnly,
-        includeChatHistory,
-        historyStartLayer,
-        historyEndLayer
-    });
     
     const $container = $('#jtw-aa-prompt-preview-content');
     $container.html('<div class="jtw-ce-loading">加载中...</div>');
@@ -328,6 +314,7 @@ async function showPromptPreviewModal() {
         const messages = await getPromptPreview(question, {
             includeWorldInfo,
             worldInfoActivatedOnly,
+            worldInfoRefreshActivation,
             includeChatHistory,
             historyStartLayer,
             historyEndLayer
@@ -370,8 +357,7 @@ async function runAsk() {
         return;
     }
     
-    const includeWorldInfo = $('#jtw-aa-include-worldinfo').prop('checked');
-    const worldInfoActivatedOnly = $('input[name="jtw-aa-worldinfo-mode"]:checked').val() === 'activated';
+    const worldInfoRefreshActivation = $('#jtw-aa-worldinfo-refresh').prop('checked');
     const includeChatHistory = $('#jtw-aa-include-history').prop('checked');
     const historyStartLayer = $('#jtw-aa-history-start').val();
     const historyEndLayer = $('#jtw-aa-history-end').val();
@@ -384,6 +370,9 @@ async function runAsk() {
     
     try {
         const response = await askAmber(question, {
+            includeWorldInfo,
+            worldInfoActivatedOnly,
+            worldInfoRefreshActivationAmber(question, {
             includeWorldInfo,
             worldInfoActivatedOnly,
             includeChatHistory,
@@ -638,7 +627,11 @@ function getModalHtml() {
                                         <label style="margin-left: 10px;">
                                             <input type="radio" name="jtw-aa-worldinfo-mode" value="activated" /> 仅激活的条目
                                         </label>
-                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"基于上一次生成时的关键词匹配结果）</div>
+                                        <div class="jtw-checkbox-row" id="jtw-aa-worldinfo-refresh-row" style="display: none; padding-left: 24px; margin-top: 5px;">
+                                            <input type="checkbox" id="jtw-aa-worldinfo-refresh" checked />
+                                            <label for="jtw-aa-worldinfo-refresh">自动刷新激活状态</label>
+                                        </div>
+                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"基于关键词匹配结果，勾选自动刷新可实时计算）</div>
                                     </div>
                                 </div>
                                 <div class="jtw-aa-history-row">
@@ -891,6 +884,16 @@ function bindModalEvents() {
             $('#jtw-aa-worldinfo-mode').show();
         } else {
             $('#jtw-aa-worldinfo-mode').hide();
+        }
+    });
+    
+    // 世界书模式切换时显示/隐藏刷新选项
+    $('input[name="jtw-aa-worldinfo-mode"]').off('change').on('change', function() {
+        const isActivatedOnly = $(this).val() === 'activated';
+        if (isActivatedOnly) {
+            $('#jtw-aa-worldinfo-refresh-row').show();
+        } else {
+            $('#jtw-aa-worldinfo-refresh-row').hide();
         }
     });
     
