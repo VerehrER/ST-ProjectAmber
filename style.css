@@ -589,7 +589,7 @@
 
 /* 主弹窗内容 */
 .jtw-ce-modal-content {
-    max-width: 1100px;
+    max-width: 1000px;
     width: 95%;
     max-height: 85vh;
 }
