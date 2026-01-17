@@ -501,12 +501,6 @@ function createDefaultTask() {
         promptA1: '',
         promptU2: '',
         promptA2: '',
-        entryTitle: '',
-        entryKeys: '',
-        entryConstant: false,
-        entryPosition: 0,
-        entryDepth: 4,
-        entryOrder: 100,
         createdAt: Date.now(),
         updatedAt: Date.now()
     };
@@ -649,19 +643,6 @@ function showTaskEditView(task, isNew = true) {
     $('#jtw-task-prompt-a1').val(task.promptA1 || '');
     $('#jtw-task-prompt-u2').val(task.promptU2 || '');
     $('#jtw-task-prompt-a2').val(task.promptA2 || '');
-    $('#jtw-task-entry-title').val(task.entryTitle || '');
-    $('#jtw-task-entry-keys').val(task.entryKeys || '');
-    $('#jtw-task-entry-constant').prop('checked', task.entryConstant || false);
-    $('#jtw-task-entry-position').val(task.entryPosition || 0);
-    $('#jtw-task-entry-depth').val(task.entryDepth || 4);
-    $('#jtw-task-entry-order').val(task.entryOrder || 100);
-    
-    // 显示/隐藏深度输入框
-    if (parseInt($('#jtw-task-entry-position').val()) === 4) {
-        $('#jtw-task-depth-container').show();
-    } else {
-        $('#jtw-task-depth-container').hide();
-    }
 }
 
 /**
@@ -774,13 +755,7 @@ function getTaskFromForm() {
         promptU1: $('#jtw-task-prompt-u1').val(),
         promptA1: $('#jtw-task-prompt-a1').val(),
         promptU2: $('#jtw-task-prompt-u2').val(),
-        promptA2: $('#jtw-task-prompt-a2').val(),
-        entryTitle: $('#jtw-task-entry-title').val().trim(),
-        entryKeys: $('#jtw-task-entry-keys').val().trim(),
-        entryConstant: $('#jtw-task-entry-constant').prop('checked'),
-        entryPosition: parseInt($('#jtw-task-entry-position').val()),
-        entryDepth: parseInt($('#jtw-task-entry-depth').val()) || 4,
-        entryOrder: parseInt($('#jtw-task-entry-order').val()) || 100
+        promptA2: $('#jtw-task-prompt-a2').val()
     };
 }
 
@@ -798,10 +773,6 @@ function saveTask() {
     // 验证必填字段
     if (!formData.name) {
         showTaskStatus('请输入指令名称', true);
-        return;
-    }
-    if (!formData.entryTitle) {
-        showTaskStatus('请输入条目标题', true);
         return;
     }
     
@@ -1102,48 +1073,128 @@ async function runTask(index) {
         console.log(`[${EXT_NAME}] 运行任务: ${task.name}`, messages);
         
         // 调用 LLM
-        const result = await callLLMJson(messages, true);
+        let result = await callLLMJson(messages, true);
         
         if (!result) {
             // 如果不是数组，尝试作为对象处理
-            const objResult = await callLLMJson(messages, false);
-            if (objResult) {
-                // 保存单个对象到世界书
-                const saveResult = await saveJsonToWorldbook(objResult, {
-                    name: task.entryTitle,
-                    keys: task.entryKeys ? task.entryKeys.split(',').map(k => k.trim()) : [task.entryTitle],
-                    constant: task.entryConstant,
-                    position: task.entryPosition,
-                    depth: task.entryDepth,
-                    order: task.entryOrder
-                });
-                
-                if (saveResult.success) {
-                    showTaskStatus(`任务完成: 已${saveResult.isUpdate ? '更新' : '保存'}到世界书`);
-                } else {
-                    showTaskStatus(`保存失败: ${saveResult.error}`, true);
-                }
-            } else {
-                showTaskStatus('未能从AI返回中提取有效数据', true);
-            }
+            result = await callLLMJson(messages, false);
+        }
+        
+        if (!result) {
+            showTaskStatus('未能从AI返回中提取有效数据', true);
             return;
         }
         
-        // 处理数组结果
-        if (Array.isArray(result) && result.length > 0) {
-            // 使用类似角色列表的保存逻辑
+        // 显示结果确认弹窗
+        showTaskResultModal(task, result);
+        showTaskStatus(`提取完成，请确认结果`);
+        
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 任务运行失败:`, e);
+        showTaskStatus(`运行失败: ${e.message}`, true);
+    } finally {
+        isTaskRunning = false;
+        $('.jtw-task-run').prop('disabled', false);
+    }
+}
+
+/**
+ * 显示任务结果确认弹窗
+ * @param {object} task - 任务对象
+ * @param {object|Array} result - AI 返回的结果
+ */
+function showTaskResultModal(task, result) {
+    const isArray = Array.isArray(result);
+    const content = isArray 
+        ? result.map(item => jsonToYaml(item, 0)).join('\n\n')
+        : jsonToYaml(result, 0);
+    
+    // 从结果中提取世界书属性（如果有的话）
+    const firstItem = isArray ? result[0] : result;
+    const entryName = firstItem?.name || firstItem?.title || task.name;
+    const entryKeys = firstItem?.keys || firstItem?.aliases || [];
+    const entryConstant = firstItem?.constant ?? false;
+    const entryPosition = firstItem?.position ?? 0;
+    const entryDepth = firstItem?.depth ?? 4;
+    const entryOrder = firstItem?.order ?? 100;
+    
+    // 填充弹窗
+    $('#jtw-task-result-content').val(content);
+    $('#jtw-task-result-count').text(isArray ? `提取到 ${result.length} 条数据` : '提取到 1 条数据');
+    $('#jtw-task-result-entry-name').val(entryName);
+    $('#jtw-task-result-entry-keys').val(Array.isArray(entryKeys) ? entryKeys.join(',') : entryKeys);
+    $('#jtw-task-result-entry-constant').prop('checked', entryConstant);
+    $('#jtw-task-result-entry-position').val(entryPosition);
+    $('#jtw-task-result-entry-depth').val(entryDepth);
+    $('#jtw-task-result-entry-order').val(entryOrder);
+    
+    // 显示/隐藏深度
+    if (entryPosition === 4) {
+        $('#jtw-task-result-depth-container').show();
+    } else {
+        $('#jtw-task-result-depth-container').hide();
+    }
+    
+    // 存储原始数据供保存时使用
+    $('#jtw-task-result-modal').data('result', result);
+    $('#jtw-task-result-modal').data('task', task);
+    
+    $('#jtw-task-result-modal').fadeIn(200);
+}
+
+/**
+ * 隐藏任务结果弹窗
+ */
+function hideTaskResultModal() {
+    $('#jtw-task-result-modal').fadeOut(200);
+}
+
+/**
+ * 保存任务结果到世界书
+ */
+async function saveTaskResult() {
+    const $modal = $('#jtw-task-result-modal');
+    const result = $modal.data('result');
+    const $saveBtn = $('#jtw-task-result-save');
+    const $status = $('#jtw-task-result-status');
+    
+    if (!result) {
+        $status.text('没有可保存的数据').removeClass('success').addClass('error').show();
+        setTimeout(() => $status.fadeOut(), 3000);
+        return;
+    }
+    
+    // 获取用户设置的世界书属性
+    const entryName = $('#jtw-task-result-entry-name').val().trim();
+    const entryKeys = $('#jtw-task-result-entry-keys').val().trim();
+    const entryConstant = $('#jtw-task-result-entry-constant').prop('checked');
+    const entryPosition = parseInt($('#jtw-task-result-entry-position').val());
+    const entryDepth = parseInt($('#jtw-task-result-entry-depth').val()) || 4;
+    const entryOrder = parseInt($('#jtw-task-result-entry-order').val()) || 100;
+    
+    if (!entryName) {
+        $status.text('请输入条目名称').removeClass('success').addClass('error').show();
+        setTimeout(() => $status.fadeOut(), 3000);
+        return;
+    }
+    
+    $saveBtn.prop('disabled', true).text('保存中...');
+    
+    try {
+        const settings = getSettings();
+        const isArray = Array.isArray(result);
+        
+        if (isArray && result.length > 0) {
+            // 数组结果：追加到条目
             const targetBook = settings.targetWorldbook || getCharacterWorldbook();
             
             if (!targetBook) {
-                showTaskStatus('未找到有效的世界书', true);
-                return;
+                throw new Error('未找到有效的世界书');
             }
             
-            // 加载世界书
             const worldData = await loadWorldInfo(targetBook);
             if (!worldData) {
-                showTaskStatus('无法加载世界书', true);
-                return;
+                throw new Error('无法加载世界书');
             }
             
             // 查找或创建条目
@@ -1152,7 +1203,7 @@ async function runTask(index) {
             
             if (worldData.entries && typeof worldData.entries === 'object') {
                 const entriesArray = Object.values(worldData.entries);
-                const existingEntry = entriesArray.find(e => e && e.comment === task.entryTitle);
+                const existingEntry = entriesArray.find(e => e && e.comment === entryName);
                 if (existingEntry) {
                     entry = existingEntry;
                     existingContent = entry.content || '';
@@ -1172,30 +1223,49 @@ async function runTask(index) {
             
             // 设置条目属性
             Object.assign(entry, {
-                comment: task.entryTitle,
-                key: task.entryKeys ? task.entryKeys.split(',').map(k => k.trim()) : [task.entryTitle],
+                comment: entryName,
+                key: entryKeys ? entryKeys.split(',').map(k => k.trim()) : [entryName],
                 content: finalContent,
-                constant: task.entryConstant,
+                constant: entryConstant,
                 selective: true,
                 disable: false,
-                position: task.entryPosition,
-                depth: task.entryPosition === 4 ? task.entryDepth : undefined,
-                order: task.entryOrder
+                position: entryPosition,
+                depth: entryPosition === 4 ? entryDepth : undefined,
+                order: entryOrder
             });
             
             await saveWorldInfo(targetBook, worldData, true);
-            showTaskStatus(`任务完成: 已添加 ${result.length} 个条目到「${task.entryTitle}」`);
+            
+            $status.text(`成功保存 ${result.length} 条数据到「${entryName}」`).removeClass('error').addClass('success').show();
         } else {
-            showTaskStatus('AI返回了空数据', true);
+            // 单对象结果
+            const saveResult = await saveJsonToWorldbook(result, {
+                name: entryName,
+                keys: entryKeys ? entryKeys.split(',').map(k => k.trim()) : [entryName],
+                constant: entryConstant,
+                position: entryPosition,
+                depth: entryDepth,
+                order: entryOrder
+            });
+            
+            if (saveResult.success) {
+                $status.text(`已${saveResult.isUpdate ? '更新' : '保存'}到世界书`).removeClass('error').addClass('success').show();
+            } else {
+                throw new Error(saveResult.error);
+            }
         }
         
+        setTimeout(() => {
+            hideTaskResultModal();
+        }, 1500);
+        
     } catch (e) {
-        console.error(`[${EXT_NAME}] 任务运行失败:`, e);
-        showTaskStatus(`运行失败: ${e.message}`, true);
-    } finally {
-        isTaskRunning = false;
-        $('.jtw-task-run').prop('disabled', false);
+        console.error(`[${EXT_NAME}] 保存任务结果失败:`, e);
+        $status.text(`保存失败: ${e.message}`).removeClass('success').addClass('error').show();
     }
+    
+    $saveBtn.prop('disabled', false).text('保存到世界书');
+    setTimeout(() => $status.fadeOut(), 5000);
 }
 
 /**
@@ -1275,12 +1345,23 @@ function initTaskEvents() {
     // 保存任务
     $('#jtw-save-task').on('click', saveTask);
     
-    // 条目位置变化时显示/隐藏深度输入框
-    $('#jtw-task-entry-position').on('change', function() {
+    // 任务结果弹窗事件
+    $('#jtw-task-result-close, #jtw-task-result-cancel').on('click', hideTaskResultModal);
+    $('#jtw-task-result-save').on('click', saveTaskResult);
+    
+    // 任务结果弹窗位置变化时显示/隐藏深度输入框
+    $('#jtw-task-result-entry-position').on('change', function() {
         if (parseInt($(this).val()) === 4) {
-            $('#jtw-task-depth-container').show();
+            $('#jtw-task-result-depth-container').show();
         } else {
-            $('#jtw-task-depth-container').hide();
+            $('#jtw-task-result-depth-container').hide();
+        }
+    });
+    
+    // 点击任务结果弹窗背景关闭
+    $('#jtw-task-result-modal').on('click', function(e) {
+        if (e.target === this) {
+            hideTaskResultModal();
         }
     });
     
@@ -1693,43 +1774,65 @@ function createSettingsUI() {
                     </div>
                     
                     <div class="jtw-section">
-                        <h4>世界书设置</h4>
-                        <div style="margin-bottom: 10px;">
-                            <label>条目标题（用于判断创建或更新）<span class="jtw-required">*</span></label>
-                            <input type="text" id="jtw-task-entry-title" class="jtw-input" placeholder="例如：场景信息" />
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>关键词（逗号分隔，留空使用标题）</label>
-                            <input type="text" id="jtw-task-entry-keys" class="jtw-input" placeholder="关键词1,关键词2" />
-                        </div>
-                        <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
-                            <input type="checkbox" id="jtw-task-entry-constant" />
-                            <label for="jtw-task-entry-constant">始终启用（Constant）</label>
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>条目位置</label>
-                            <select id="jtw-task-entry-position" class="jtw-select">
-                                <option value="0">角色定义之前</option>
-                                <option value="1">角色定义之后</option>
-                                <option value="2">作者注释之前</option>
-                                <option value="3">作者注释之后</option>
-                                <option value="4">@ Depth</option>
-                            </select>
-                        </div>
-                        <div id="jtw-task-depth-container" style="margin-bottom: 10px; display: none;">
-                            <label>深度值 (Depth)</label>
-                            <input type="number" id="jtw-task-entry-depth" class="jtw-input" value="4" min="0" max="999" />
-                        </div>
-                        <div style="margin-bottom: 10px;">
-                            <label>排序优先级</label>
-                            <input type="number" id="jtw-task-entry-order" class="jtw-input" value="100" min="0" />
-                        </div>
-                    </div>
-                    
-                    <div class="jtw-section">
                         <div class="jtw-task-edit-buttons">
                             <button id="jtw-cancel-task" class="jtw-btn">取消</button>
                             <button id="jtw-save-task" class="jtw-btn primary">保存</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 任务结果确认弹窗 -->
+                <div id="jtw-task-result-modal" class="jtw-modal" style="display: none;">
+                    <div class="jtw-modal-content jtw-ce-modal-content">
+                        <div class="jtw-modal-header">
+                            <h3>任务结果确认</h3>
+                            <button class="jtw-modal-close" id="jtw-task-result-close">✕</button>
+                        </div>
+                        <div class="jtw-modal-body">
+                            <div id="jtw-task-result-count" style="margin-bottom: 10px; color: var(--SmartThemeQuoteColor);"></div>
+                            <textarea id="jtw-task-result-content" class="jtw-input" rows="10" style="font-family: monospace; font-size: 12px;"></textarea>
+                            
+                            <div class="jtw-section" style="margin-top: 15px;">
+                                <h4>世界书设置</h4>
+                                <div style="margin-bottom: 10px;">
+                                    <label>条目名称 <span class="jtw-required">*</span></label>
+                                    <input type="text" id="jtw-task-result-entry-name" class="jtw-input" placeholder="条目名称" />
+                                </div>
+                                <div style="margin-bottom: 10px;">
+                                    <label>关键词（逗号分隔，留空使用条目名称）</label>
+                                    <input type="text" id="jtw-task-result-entry-keys" class="jtw-input" placeholder="关键词1,关键词2" />
+                                </div>
+                                <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                                    <input type="checkbox" id="jtw-task-result-entry-constant" />
+                                    <label for="jtw-task-result-entry-constant">始终启用（Constant）</label>
+                                </div>
+                                <div style="display: flex; gap: 10px;">
+                                    <div style="flex: 1;">
+                                        <label>条目位置</label>
+                                        <select id="jtw-task-result-entry-position" class="jtw-select">
+                                            <option value="0">角色定义之前</option>
+                                            <option value="1">角色定义之后</option>
+                                            <option value="2">作者注释之前</option>
+                                            <option value="3">作者注释之后</option>
+                                            <option value="4">@ Depth</option>
+                                        </select>
+                                    </div>
+                                    <div id="jtw-task-result-depth-container" style="flex: 1; display: none;">
+                                        <label>深度</label>
+                                        <input type="number" id="jtw-task-result-entry-depth" class="jtw-input" value="4" min="0" max="999" />
+                                    </div>
+                                    <div style="flex: 1;">
+                                        <label>排序</label>
+                                        <input type="number" id="jtw-task-result-entry-order" class="jtw-input" value="100" min="0" />
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div id="jtw-task-result-status" class="jtw-status" style="display: none; margin-top: 10px;"></div>
+                        </div>
+                        <div class="jtw-modal-footer">
+                            <button id="jtw-task-result-cancel" class="jtw-btn">取消</button>
+                            <button id="jtw-task-result-save" class="jtw-btn primary">保存到世界书</button>
                         </div>
                     </div>
                 </div>
