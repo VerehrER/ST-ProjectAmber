@@ -36,6 +36,8 @@ const defaultSettings = {
     entryOrder: 100,           // 条目排序
     depth: 4,                  // @ Depth 的深度值
     lastExtractedJson: null,   // 上次提取的 JSON
+    // 快捷图标设置
+    showQuickAccess: true,     // 是否显示聊天界面快捷图标
     // 自定义任务列表
     customTasks: [],           // 自定义任务条目数组
     // 提取设置
@@ -748,6 +750,15 @@ function createSettingsUI() {
                         <label>历史消息数量</label>
                         <input type="number" id="jtw-history-count" class="jtw-input" value="50" min="10" max="200" />
                     </div>
+                    
+                    <h4 style="margin-top: 15px;">界面设置</h4>
+                    <div class="jtw-checkbox-row" style="margin-bottom: 10px;">
+                        <input type="checkbox" id="jtw-show-quick-access" />
+                        <label for="jtw-show-quick-access">显示聊天界面快捷图标</label>
+                        <div class="jtw-hint" style="margin-left: 24px;">在聊天界面右侧显示快捷图标，快速打开问问琥珀、角色提取和自定义任务</div>
+                    </div>
+                    
+                    <h4 style="margin-top: 15px;">标签处理</h4>
                     <div style="margin-bottom: 10px;">
                         <label>仅包括标签（逗号分隔）</label>
                         <input type="text" id="jtw-include-tags" class="jtw-input" placeholder="main_plot" />
@@ -932,6 +943,13 @@ function createSettingsUI() {
         saveSettings();
     });
     
+    // 快捷图标开关
+    $('#jtw-show-quick-access').prop('checked', settings.showQuickAccess ?? true).on('change', function() {
+        settings.showQuickAccess = $(this).prop('checked');
+        saveSettings();
+        toggleQuickAccessPanel(settings.showQuickAccess);
+    });
+    
     // 初始化故事助手
     initStoryAssistantModule();
 }
@@ -1101,6 +1119,139 @@ async function onMessageReceived(mesId) {
     }
 }
 
+// ==================== 快捷图标面板 ====================
+
+/**
+ * 创建快捷图标面板
+ */
+function createQuickAccessPanel() {
+    // 移除已存在的面板
+    $('#jtw-quick-access-panel').remove();
+    
+    const quickAccessHtml = `
+        <div id="jtw-quick-access-panel" class="jtw-quick-access">
+            <div class="jtw-quick-access-toggle" title="Project Amber 快捷菜单">
+                <i class="fa-solid fa-gem"></i>
+            </div>
+            <div class="jtw-quick-access-menu">
+                <div class="jtw-quick-access-item" data-action="ask-amber" title="问问琥珀">
+                    <i class="fa-regular fa-comments"></i>
+                    <span>问问琥珀</span>
+                </div>
+                <div class="jtw-quick-access-item" data-action="character-extract" title="角色提取">
+                    <i class="fa-solid fa-users"></i>
+                    <span>角色提取</span>
+                </div>
+                <div class="jtw-quick-access-item" data-action="custom-tasks" title="自定义任务">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>自定义任务</span>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 添加到 body
+    $('body').append(quickAccessHtml);
+    
+    // 绑定事件
+    bindQuickAccessEvents();
+    
+    // 根据设置决定是否显示
+    const settings = getSettings();
+    toggleQuickAccessPanel(settings.showQuickAccess ?? true);
+}
+
+/**
+ * 绑定快捷面板事件
+ */
+function bindQuickAccessEvents() {
+    const $panel = $('#jtw-quick-access-panel');
+    const $toggle = $panel.find('.jtw-quick-access-toggle');
+    const $menu = $panel.find('.jtw-quick-access-menu');
+    
+    // 点击切换按钮展开/收起菜单
+    $toggle.on('click', function(e) {
+        e.stopPropagation();
+        $panel.toggleClass('expanded');
+    });
+    
+    // 点击菜单项
+    $panel.find('.jtw-quick-access-item').on('click', function(e) {
+        e.stopPropagation();
+        const action = $(this).data('action');
+        handleQuickAccessAction(action);
+        // 点击后收起菜单
+        $panel.removeClass('expanded');
+    });
+    
+    // 点击其他地方收起菜单
+    $(document).on('click', function(e) {
+        if (!$(e.target).closest('#jtw-quick-access-panel').length) {
+            $panel.removeClass('expanded');
+        }
+    });
+}
+
+/**
+ * 处理快捷操作
+ */
+function handleQuickAccessAction(action) {
+    switch (action) {
+        case 'ask-amber':
+            // 打开问问琥珀
+            AskAmber.showModal();
+            break;
+        case 'character-extract':
+            // 打开角色提取
+            CharacterExtract.showModal();
+            break;
+        case 'custom-tasks':
+            // 切换到自定义任务标签页并打开扩展面板
+            openExtensionPanel('custom-tasks');
+            break;
+    }
+}
+
+/**
+ * 打开扩展设置面板并切换到指定标签
+ */
+function openExtensionPanel(tabId) {
+    // 打开扩展面板（如果未打开）
+    const $extensionsButton = $('#extensionsMenuButton');
+    const $extensionsPanel = $('#top-settings-holder');
+    
+    // 尝试打开扩展面板
+    if (!$extensionsPanel.is(':visible')) {
+        $extensionsButton.trigger('click');
+    }
+    
+    // 延迟后切换到指定标签
+    setTimeout(() => {
+        // 找到 Project Amber 的设置面板并展开
+        const $drawer = $('#json-to-worldbook-panel').closest('.drawer-content');
+        if ($drawer.length && !$drawer.is(':visible')) {
+            $drawer.prev('.drawer-icon').trigger('click');
+        }
+        
+        // 切换到指定标签页
+        setTimeout(() => {
+            $(`.jtw-tab[data-tab="${tabId}"]`).trigger('click');
+        }, 100);
+    }, 100);
+}
+
+/**
+ * 切换快捷面板显示状态
+ */
+function toggleQuickAccessPanel(show) {
+    const $panel = $('#jtw-quick-access-panel');
+    if (show) {
+        $panel.show();
+    } else {
+        $panel.hide();
+    }
+}
+
 // ==================== 导出 API ====================
 
 // 供其他扩展或脚本使用
@@ -1118,6 +1269,9 @@ jQuery(async () => {
     
     // 创建设置界面（包含自定义任务模块初始化）
     createSettingsUI();
+    
+    // 创建快捷图标面板
+    createQuickAccessPanel();
     
     // 监听消息事件
     eventSource.on(event_types.MESSAGE_RECEIVED, onMessageReceived);
