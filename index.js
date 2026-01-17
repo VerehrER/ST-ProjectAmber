@@ -1181,46 +1181,35 @@ function bindQuickAccessEvents() {
     let startTop = 0;
     let dragStartTime = 0;
     
-    // 限制位置在容器范围内
-    const clampPosition = () => {
-        const $offsetParent = $panel.offsetParent();
-        const parentRect = $offsetParent[0].getBoundingClientRect();
-        const scrollTop = $offsetParent.scrollTop() || 0;
-        const panelHeight = $panel.outerHeight() || 40;
+    // 获取可视区域的边界（使用窗口高度而不是容器高度）
+    const getVisibleBounds = () => {
+        const $parent = $panel.parent();
+        const parentOffset = $parent.offset();
+        const parentScrollTop = $parent.scrollTop() || 0;
         const windowHeight = $(window).height();
         
-        // 获取当前 CSS top
-        let currentTop = parseFloat($panel.css('top')) || $panel[0].offsetTop;
+        // 计算父容器在屏幕中的可见部分
+        const parentTop = parentOffset ? parentOffset.top : 0;
+        const visibleTop = Math.max(0, -parentTop + parentScrollTop);
+        const visibleBottom = Math.min($parent.height(), windowHeight - parentTop + parentScrollTop);
         
-        // 算出当前的屏幕坐标 Y
-        // ScreenY = CSS_Top - ScrollTop + Parent_Screen_Top
-        let currentScreenY = currentTop - scrollTop + parentRect.top;
+        return {
+            minTop: visibleTop + 10,
+            maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
+        };
+    };
+
+    // 限制位置在可视范围内
+    const clampPosition = () => {
+        const bounds = getVisibleBounds();
+        let currentTop = $panel[0].offsetTop;
         
-        // 计算屏幕上的合法范围 (交集)
-        // 1. 视口范围内 (留 10px 边距)
-        const minScreenY_View = 10;
-        const maxScreenY_View = windowHeight - panelHeight - 10;
+        let newTop = currentTop;
+        if (newTop < bounds.minTop) newTop = bounds.minTop;
+        if (newTop > bounds.maxTop) newTop = bounds.maxTop;
         
-        // 2. 容器可视范围内 (留 10px 边距)
-        // 注意：parentRect.bottom 包含了容器的边框和滚动条，可能需要微调，但通常这就够了
-        const minScreenY_Parent = parentRect.top + 10;
-        const maxScreenY_Parent = parentRect.bottom - panelHeight - 10;
-        
-        // 取交集
-        const minScreenY = Math.max(minScreenY_View, minScreenY_Parent);
-        const maxScreenY = Math.min(maxScreenY_View, maxScreenY_Parent);
-        
-        // 限制屏幕坐标
-        let newScreenY = currentScreenY;
-        if (newScreenY < minScreenY) newScreenY = minScreenY;
-        if (newScreenY > maxScreenY) newScreenY = maxScreenY;
-        
-        // 反算回 CSS Top
-        // CSS_Top = ScreenY + ScrollTop - Parent_Screen_Top
-        let newTop = newScreenY + scrollTop - parentRect.top;
-        
-        if (Math.abs(newTop - currentTop) > 1) {
-             $panel.css({
+        if (newTop !== currentTop) {
+            $panel.css({
                 top: newTop + 'px',
                 bottom: 'auto'
             });
@@ -1285,38 +1274,16 @@ function bindQuickAccessEvents() {
             hasMoved = true;
         }
         
-        // 计算预期的 CSS Top
-        let rawTop = startTop + deltaY;
+        // 使用新的边界计算方法
+        const bounds = getVisibleBounds();
         
-        const $offsetParent = $panel.offsetParent();
-        const parentRect = $offsetParent[0].getBoundingClientRect();
-        const scrollTop = $offsetParent.scrollTop() || 0;
-        const panelHeight = $panel.outerHeight() || 40;
-        const windowHeight = $(window).height();
+        // 计算新位置，限制在可视范围内
+        let newTop = startTop + deltaY;
+        newTop = Math.max(bounds.minTop, Math.min(newTop, bounds.maxTop));
         
-        // 算出预期的屏幕坐标 Y
-        // ScreenY = CSS_Top - ScrollTop + Parent_Screen_Top
-        let screenY = rawTop - scrollTop + parentRect.top;
-        
-        // 计算屏幕上的合法范围 (交集)
-        // 1. 视口范围内
-        const minScreenY_View = 10;
-        const maxScreenY_View = windowHeight - panelHeight - 10;
-        
-        // 2. 容器可视范围内 (从 parentRect.top 到 parentRect.bottom)
-        const minScreenY_Parent = parentRect.top + 10;
-        const maxScreenY_Parent = parentRect.bottom - panelHeight - 10;
-        
-        const minScreenY = Math.max(minScreenY_View, minScreenY_Parent);
-        const maxScreenY = Math.min(maxScreenY_View, maxScreenY_Parent);
-        
-        // 限制屏幕坐标
-        screenY = Math.max(minScreenY, Math.min(screenY, maxScreenY));
-        
-        // 反算回 CSS Top
-        let newTop = screenY + scrollTop - parentRect.top;
-        
-        // 检测左右侧 (仍然基于容器中心)
+        // 检测左右侧
+        const $parent = $panel.parent();
+        const parentRect = $parent[0].getBoundingClientRect();
         const isOnLeft = clientX < parentRect.left + parentRect.width / 2;
         
         $panel.css({
