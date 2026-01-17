@@ -28,9 +28,6 @@ import * as CustomTasks from "./modules/custom-tasks/index.js";
 const EXT_NAME = "Project Amber";
 const EXT_ID = "JsonToWorldbook";
 
-// 缓存最后一次被 SillyTavern 激活的世界书条目
-let lastActivatedWorldInfoEntries = [];
-
 // 默认设置
 const defaultSettings = {
     enabled: true,
@@ -397,8 +394,6 @@ async function refreshActivatedWorldInfoEntries() {
         
         if (result?.allActivatedEntries) {
             const entries = Array.from(result.allActivatedEntries.values());
-            // 同时更新缓存
-            lastActivatedWorldInfoEntries = entries;
             console.log(`[${EXT_NAME}] 刷新了 ${entries.length} 个激活的世界书条目`);
             return entries;
         }
@@ -406,8 +401,7 @@ async function refreshActivatedWorldInfoEntries() {
         return [];
     } catch (e) {
         console.error(`[${EXT_NAME}] 刷新激活世界书条目失败:`, e);
-        // 如果刷新失败，回退到缓存
-        return lastActivatedWorldInfoEntries;
+        return [];
     }
 }
 
@@ -1560,14 +1554,6 @@ jQuery(async () => {
     
     // 监听提示词准备事件，用于并行任务注入
     eventSource.on(event_types.CHAT_COMPLETION_PROMPT_READY, CustomTasks.onChatCompletionPromptReady);
-    
-    // 监听世界书激活事件，缓存被激活的条目
-    eventSource.on(event_types.WORLD_INFO_ACTIVATED, (entries) => {
-        if (Array.isArray(entries)) {
-            lastActivatedWorldInfoEntries = entries;
-            console.log(`[${EXT_NAME}] 缓存了 ${entries.length} 个激活的世界书条目`);
-        }
-    });
 
     console.log(`[${EXT_NAME}] 初始化完成`);
 });
