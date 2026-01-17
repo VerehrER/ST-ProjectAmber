@@ -1218,10 +1218,9 @@ function bindQuickAccessEvents() {
         const clientY = e.type.includes('touch') ? e.originalEvent.touches[0].clientY : e.clientY;
         startY = clientY;
         
-        // 获取当前位置 - 先将元素转换为 top 定位
-        const rect = $panel[0].getBoundingClientRect();
-        const containerRect = $panel.parent()[0].getBoundingClientRect();
-        startTop = rect.top - containerRect.top;
+        // 使用 jQuery 的 position() 获取相对于父容器的当前位置
+        const currentPosition = $panel.position();
+        startTop = currentPosition.top;
         
         // 立即设置为 top 定位，避免后续计算偏差
         $panel.css({
@@ -1277,12 +1276,11 @@ function bindQuickAccessEvents() {
         isDragging = false;
         $panel.removeClass('dragging');
         
-        // 保存位置
-        const rect = $panel[0].getBoundingClientRect();
-        const containerRect = $panel.parent()[0].getBoundingClientRect();
+        // 保存位置 - 使用 position() 获取相对于父容器的位置
+        const currentPosition = $panel.position();
         const settings = getSettings();
         settings.quickAccessPosition = {
-            top: rect.top - containerRect.top,
+            top: currentPosition.top,
             side: $panel.hasClass('on-left') ? 'left' : 'right'
         };
         saveSettings();
