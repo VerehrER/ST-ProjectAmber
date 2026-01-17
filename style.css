@@ -741,47 +741,31 @@
     flex-direction: column;
 }
 
-/* 预览区域 */
-.jtw-ce-preview-section {
+/* 提示词设置区域 */
+.jtw-ce-prompts-section {
     flex: 1;
     display: flex;
     flex-direction: column;
     min-height: 0;
 }
 
-.jtw-ce-preview-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 10px;
+.jtw-ce-prompts-section textarea {
+    resize: vertical;
 }
 
-.jtw-ce-preview-header h4 {
-    margin: 0;
+/* 提示词预览弹窗 */
+.jtw-ce-prompt-modal-content {
+    max-width: 800px;
+    width: 90%;
+    max-height: 85vh;
 }
 
 .jtw-ce-prompt-preview {
-    flex: 1;
     overflow-y: auto;
-    max-height: 450px;
+    max-height: 60vh;
     border: 1px solid var(--SmartThemeBorderColor);
     border-radius: 6px;
     background: rgba(0, 0, 0, 0.1);
-}
-
-.jtw-ce-prompt-preview .jtw-prompt-message {
-    margin: 0;
-    border-radius: 0;
-    border: none;
-    border-bottom: 1px solid var(--SmartThemeBorderColor);
-}
-
-.jtw-ce-prompt-preview .jtw-prompt-message:last-child {
-    border-bottom: none;
-}
-
-.jtw-ce-prompt-preview .jtw-prompt-content {
-    max-height: 200px;
 }
 
 /* 运行区域 */
@@ -843,4 +827,21 @@
     opacity: 0.8;
     margin-top: 8px;
     text-align: center;
+}
+
+/* 提示词预览弹窗消息样式 */
+.jtw-ce-prompt-preview .jtw-prompt-message {
+    margin: 0;
+    border-radius: 0;
+    border: none;
+    border-bottom: 1px solid var(--SmartThemeBorderColor);
+}
+
+.jtw-ce-prompt-preview .jtw-prompt-message:last-child {
+    border-bottom: none;
+}
+
+.jtw-ce-prompt-preview .jtw-prompt-content {
+    max-height: 300px;
+    overflow-y: auto;
 }

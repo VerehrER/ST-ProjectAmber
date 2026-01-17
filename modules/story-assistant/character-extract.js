@@ -462,6 +462,21 @@ function hideResultModal() {
 }
 
 /**
+ * 显示提示词预览弹窗
+ */
+async function showPromptModal() {
+    $('#jtw-ce-prompt-modal').fadeIn(200);
+    await loadPromptPreview();
+}
+
+/**
+ * 隐藏提示词预览弹窗
+ */
+function hidePromptModal() {
+    $('#jtw-ce-prompt-modal').fadeOut(200);
+}
+
+/**
  * 保存提取结果
  */
 async function saveExtractionResult() {
@@ -571,36 +586,13 @@ export function renderSettingsPanel() {
                     <!-- 设置页 -->
                     <div class="jtw-ce-tab-content" id="jtw-ce-tab-settings">
                         <div class="jtw-ce-settings-grid">
-                            <!-- 左侧：设置项 -->
+                            <!-- 左侧：基本设置和世界书设置 -->
                             <div class="jtw-ce-settings-left">
                                 <div class="jtw-section">
                                     <h4>基本设置</h4>
                                     <div style="margin-bottom: 10px;">
                                         <label>条目名称</label>
                                         <input type="text" id="jtw-ce-entry-name" class="jtw-input" placeholder="出场角色列表" />
-                                    </div>
-                                </div>
-                                
-                                <div class="jtw-section">
-                                    <h4>提示词设置</h4>
-                                    <button id="jtw-ce-toggle-prompts" class="jtw-btn jtw-btn-small" style="margin-bottom: 10px;">展开自定义提示词</button>
-                                    <div id="jtw-ce-prompts-container" style="display: none;">
-                                        <div style="margin-bottom: 8px;">
-                                            <label>User 消息 1</label>
-                                            <textarea id="jtw-ce-prompt-u1" class="jtw-input" rows="2"></textarea>
-                                        </div>
-                                        <div style="margin-bottom: 8px;">
-                                            <label>Assistant 消息 1</label>
-                                            <textarea id="jtw-ce-prompt-a1" class="jtw-input" rows="2"></textarea>
-                                        </div>
-                                        <div style="margin-bottom: 8px;">
-                                            <label>User 消息 2</label>
-                                            <textarea id="jtw-ce-prompt-u2" class="jtw-input" rows="6"></textarea>
-                                        </div>
-                                        <div style="margin-bottom: 8px;">
-                                            <label>Assistant 消息 2</label>
-                                            <textarea id="jtw-ce-prompt-a2" class="jtw-input" rows="1"></textarea>
-                                        </div>
                                     </div>
                                 </div>
                                 
@@ -628,19 +620,30 @@ export function renderSettingsPanel() {
                                 
                                 <div class="jtw-ce-run-section">
                                     <button id="jtw-ce-run-extract" class="jtw-btn primary">运行提取</button>
+                                    <button id="jtw-ce-preview-prompt" class="jtw-btn" style="margin-top: 8px;">📋 预览完整提示词</button>
                                     <div id="jtw-ce-settings-status" class="jtw-status" style="display: none;"></div>
                                 </div>
                             </div>
                             
-                            <!-- 右侧：提示词预览 -->
+                            <!-- 右侧：提示词设置 -->
                             <div class="jtw-ce-settings-right">
-                                <div class="jtw-section jtw-ce-preview-section">
-                                    <div class="jtw-ce-preview-header">
-                                        <h4>完整提示词预览</h4>
-                                        <button id="jtw-ce-refresh-preview" class="jtw-btn jtw-btn-small">🔄 刷新</button>
+                                <div class="jtw-section jtw-ce-prompts-section">
+                                    <h4>提示词设置</h4>
+                                    <div style="margin-bottom: 8px;">
+                                        <label>User 消息 1</label>
+                                        <textarea id="jtw-ce-prompt-u1" class="jtw-input" rows="2"></textarea>
                                     </div>
-                                    <div id="jtw-ce-prompt-preview" class="jtw-ce-prompt-preview">
-                                        <div class="jtw-ce-loading">点击「刷新」加载预览</div>
+                                    <div style="margin-bottom: 8px;">
+                                        <label>Assistant 消息 1</label>
+                                        <textarea id="jtw-ce-prompt-a1" class="jtw-input" rows="2"></textarea>
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <label>User 消息 2</label>
+                                        <textarea id="jtw-ce-prompt-u2" class="jtw-input" rows="6"></textarea>
+                                    </div>
+                                    <div style="margin-bottom: 8px;">
+                                        <label>Assistant 消息 2</label>
+                                        <textarea id="jtw-ce-prompt-a2" class="jtw-input" rows="1"></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -669,6 +672,21 @@ export function renderSettingsPanel() {
                 </div>
             </div>
         </div>
+        
+        <!-- 提示词预览弹窗 -->
+        <div id="jtw-ce-prompt-modal" class="jtw-modal" style="display: none;">
+            <div class="jtw-modal-content jtw-ce-prompt-modal-content">
+                <div class="jtw-modal-header">
+                    <h3>📋 完整提示词预览</h3>
+                    <button class="jtw-modal-close jtw-ce-close-prompt">✕</button>
+                </div>
+                <div class="jtw-modal-body">
+                    <div id="jtw-ce-prompt-preview" class="jtw-ce-prompt-preview">
+                        <div class="jtw-ce-loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
     `;
 }
 
@@ -693,6 +711,12 @@ export function initSettingsEvents(saveSettings) {
         if (e.target === this) hideResultModal();
     });
     
+    // 关闭提示词预览弹窗
+    $('.jtw-ce-close-prompt').on('click', hidePromptModal);
+    $('#jtw-ce-prompt-modal').on('click', function(e) {
+        if (e.target === this) hidePromptModal();
+    });
+    
     // 标签页切换
     $('.jtw-ce-tab').on('click', function() {
         const tab = $(this).data('tab');
@@ -710,8 +734,8 @@ export function initSettingsEvents(saveSettings) {
     // 保存条目编辑
     $('#jtw-ce-save-entry').on('click', saveEntryEdit);
     
-    // 刷新提示词预览
-    $('#jtw-ce-refresh-preview').on('click', loadPromptPreview);
+    // 预览提示词弹窗
+    $('#jtw-ce-preview-prompt').on('click', showPromptModal);
     
     // 运行提取
     $('#jtw-ce-run-extract').on('click', runAndShowResult);
@@ -749,19 +773,6 @@ export function initSettingsEvents(saveSettings) {
     $('#jtw-ce-prompt-a2').val(settings.promptA2 || defaultA2).on('change', function() {
         settings.promptA2 = $(this).val();
         saveSettings();
-    });
-    
-    // 提示词折叠
-    $('#jtw-ce-toggle-prompts').on('click', function() {
-        const $container = $('#jtw-ce-prompts-container');
-        const $button = $(this);
-        if ($container.is(':visible')) {
-            $container.slideUp();
-            $button.text('展开自定义提示词');
-        } else {
-            $container.slideDown();
-            $button.text('收起自定义提示词');
-        }
     });
     
     // 条目位置
