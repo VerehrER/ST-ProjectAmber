@@ -490,7 +490,7 @@
     font-size: 13px;
     line-height: 1.6;
     color: var(--SmartThemeBodyColor);
-    max-height: 400px;
+    max-height: 600px;
     overflow-y: auto;
 }
 
@@ -757,9 +757,7 @@
 .jtw-ce-prompt-modal-content {
     max-width: 900px;
     width: 100%;
-    /* max-height: 90vh; */
-    max-height: 400px;
-
+    max-height: 90vh;
 }
 
 .jtw-ce-prompt-preview {
