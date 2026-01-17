@@ -1407,7 +1407,7 @@ function handleQuickAccessAction(action) {
 function openExtensionPanel(tabId) {
     // 打开扩展面板（如果未打开）
     const $extensionsButton = $('#extensionsMenuButton');
-    const $extensionsPanel = $('#top-settings-holder');
+    const $extensionsPanel = $('#extensionsMenu');
     
     // 尝试打开扩展面板
     if (!$extensionsPanel.is(':visible')) {
@@ -1416,17 +1416,27 @@ function openExtensionPanel(tabId) {
     
     // 延迟后切换到指定标签
     setTimeout(() => {
-        // 找到 Project Amber 的设置面板并展开
-        const $drawer = $('#json-to-worldbook-panel').closest('.drawer-content');
-        if ($drawer.length && !$drawer.is(':visible')) {
-            $drawer.prev('.drawer-icon').trigger('click');
+        // 找到 Project Amber 的设置面板
+        const $amberPanel = $('#json-to-worldbook-panel');
+        const $drawer = $amberPanel.closest('.inline-drawer');
+        
+        // 如果抽屉未展开，展开它
+        if ($drawer.length) {
+            const $drawerContent = $drawer.find('.inline-drawer-content');
+            const $drawerIcon = $drawer.find('.inline-drawer-icon');
+            
+            // 检查是否已展开（通过检查icon是否有down class）
+            if ($drawerIcon.hasClass('down')) {
+                // 未展开，点击展开
+                $drawer.find('.inline-drawer-toggle').trigger('click');
+            }
         }
         
         // 切换到指定标签页
         setTimeout(() => {
             $(`.jtw-tab[data-tab="${tabId}"]`).trigger('click');
-        }, 100);
-    }, 100);
+        }, 150);
+    }, 150);
 }
 
 /**
