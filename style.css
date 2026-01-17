@@ -1118,6 +1118,17 @@
     transform: translateX(5px);
 }
 
+/* 菜单在下方显示时的样式 */
+.jtw-quick-access.menu-below .jtw-quick-access-menu {
+    bottom: auto;
+    top: calc(100% + 8px);
+    transform: translateY(-10px);
+}
+
+.jtw-quick-access.menu-below.expanded .jtw-quick-access-menu {
+    transform: translateY(0);
+}
+
 .jtw-quick-access-item i {
     width: 20px;
     text-align: center;

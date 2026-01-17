@@ -1194,13 +1194,25 @@ function bindQuickAccessEvents() {
         const visibleTop = Math.max(0, -parentTop + parentScrollTop);
         const visibleBottom = Math.min($parent.height(), windowHeight - parentTop + parentScrollTop);
         
-        // 宽屏模式下（宽度 > 1000px），向下偏移以避开顶部区域
-        const topOffset = windowWidth > 1000 ? 60 : 0;
-
         return {
             minTop: visibleTop + 10,
             maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
         };
+    };
+
+    // 根据图标位置更新菜单显示方向
+    const updateMenuPosition = () => {
+        const $parent = $panel.parent();
+        const containerHeight = $parent.height();
+        const currentTop = $panel[0].offsetTop;
+        const panelCenter = currentTop + ($panel.outerHeight() || 40) / 2;
+        
+        // 如果图标在容器上半部分，菜单显示在下方；否则显示在上方
+        if (panelCenter < containerHeight / 2) {
+            $panel.addClass('menu-below');
+        } else {
+            $panel.removeClass('menu-below');
+        }
     };
 
     // 限制位置在可视范围内
@@ -1218,6 +1230,9 @@ function bindQuickAccessEvents() {
                 bottom: 'auto'
             });
         }
+        
+        // 更新菜单位置
+        updateMenuPosition();
     };
     
     // 加载保存的位置
@@ -1237,13 +1252,19 @@ function bindQuickAccessEvents() {
         
         // 加载后立即检查位置是否越界（例如从 PC 切换到手机预览）
         // 使用 setTimeout 确保 DOM 渲染完成
-        setTimeout(clampPosition, 100);
+        setTimeout(() => {
+            clampPosition();
+            updateMenuPosition();
+        }, 100);
     }
 
     // 监听窗口大小变化
     $(window).on('resize', () => {
         // 使用防抖或简单的 requestAnimationFrame 优化
-        requestAnimationFrame(clampPosition);
+        requestAnimationFrame(() => {
+            clampPosition();
+            updateMenuPosition();
+        });
     });
     
     // 开始拖拽
@@ -1300,6 +1321,9 @@ function bindQuickAccessEvents() {
         
         $panel.toggleClass('on-left', isOnLeft);
         
+        // 实时更新菜单方向
+        updateMenuPosition();
+        
         e.preventDefault();
     };
     
@@ -1311,6 +1335,9 @@ function bindQuickAccessEvents() {
         
         // 再次检查边界，确保最终位置合法
         clampPosition();
+        
+        // 更新菜单方向
+        updateMenuPosition();
 
         // 保存位置
         const settings = getSettings();
