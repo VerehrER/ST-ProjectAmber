@@ -1299,10 +1299,33 @@ function initTaskEvents() {
         deleteTask(index);
     });
     
-    // 双击任务条目预览提示词
+    // 双击任务条目预览提示词（PC端）
     $('#jtw-task-list').on('dblclick', '.jtw-task-item', function() {
         const index = parseInt($(this).data('index'));
         previewTaskPrompt(index);
+    });
+    
+    // 为触屏设备添加长按预览支持
+    let touchTimer;
+    let touchMoved = false;
+    $('#jtw-task-list').on('touchstart', '.jtw-task-item', function(e) {
+        const $item = $(this);
+        touchMoved = false;
+        touchTimer = setTimeout(() => {
+            if (!touchMoved) {
+                const index = parseInt($item.data('index'));
+                previewTaskPrompt(index);
+            }
+        }, 500); // 长按500ms触发预览
+    });
+    
+    $('#jtw-task-list').on('touchmove', '.jtw-task-item', function() {
+        touchMoved = true;
+        clearTimeout(touchTimer);
+    });
+    
+    $('#jtw-task-list').on('touchend touchcancel', '.jtw-task-item', function() {
+        clearTimeout(touchTimer);
     });
     
     // 关闭预览模态框
