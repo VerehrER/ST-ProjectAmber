@@ -375,8 +375,8 @@
     left: 0;
     right: 0;
     bottom: 0;
-    width: 100%;
-    height: 100%;
+    width: 100vw;
+    height: 100vh;
     background: rgba(0, 0, 0, 0.7);
     z-index: 100000;
     display: flex;
@@ -384,6 +384,9 @@
     justify-content: center;
     padding: 20px;
     box-sizing: border-box;
+    /* 确保在移动端也能正确覆盖 */
+    -webkit-overflow-scrolling: touch;
+    overflow: auto;
 }
 
 .jtw-modal-content {
@@ -1184,6 +1187,24 @@
     
     .jtw-quick-access-item:hover {
         transform: translateX(0) scale(1.02);
+    }
+    
+    /* 窄屏模式下确保模态框正确覆盖 */
+    .jtw-modal {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.85) !important;
+    }
+    
+    .jtw-modal-content {
+        max-height: 85vh;
+        max-width: 100%;
     }
 }
 
