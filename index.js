@@ -1187,14 +1187,18 @@ function bindQuickAccessEvents() {
         const parentOffset = $parent.offset();
         const parentScrollTop = $parent.scrollTop() || 0;
         const windowHeight = $(window).height();
+        const windowWidth = $(window).width();
         
         // 计算父容器在屏幕中的可见部分
         const parentTop = parentOffset ? parentOffset.top : 0;
         const visibleTop = Math.max(0, -parentTop + parentScrollTop);
         const visibleBottom = Math.min($parent.height(), windowHeight - parentTop + parentScrollTop);
         
+        // 宽屏模式下（宽度 > 1000px），向下偏移 280px 以避开顶部区域
+        const topOffset = windowWidth > 1000 ? 280 : 0;
+        
         return {
-            minTop: visibleTop + 10,
+            minTop: visibleTop + topOffset + 10,
             maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
         };
     };
