@@ -69,6 +69,7 @@ export function createDefaultTask() {
         promptA1: '',
         promptU2: '',
         promptA2: '',
+        historyCount: null,   // 自定义历史消息数量，null 表示使用全局设置
         createdAt: Date.now(),
         updatedAt: Date.now()
     };
@@ -203,6 +204,7 @@ function showTaskEditView(task, isNew = true) {
     $('#jtw-task-prompt-a1').val(task.promptA1 || '');
     $('#jtw-task-prompt-u2').val(task.promptU2 || '');
     $('#jtw-task-prompt-a2').val(task.promptA2 || '');
+    $('#jtw-task-history-count').val(task.historyCount ?? '');
 }
 
 /**
@@ -316,12 +318,14 @@ function toggleParallelTask(index, enabled) {
  * 从表单获取任务数据
  */
 function getTaskFromForm() {
+    const historyCountValue = $('#jtw-task-history-count').val().trim();
     return {
         name: $('#jtw-task-name').val().trim(),
         promptU1: $('#jtw-task-prompt-u1').val(),
         promptA1: $('#jtw-task-prompt-a1').val(),
         promptU2: $('#jtw-task-prompt-u2').val(),
-        promptA2: $('#jtw-task-prompt-a2').val()
+        promptA2: $('#jtw-task-prompt-a2').val(),
+        historyCount: historyCountValue === '' ? null : parseInt(historyCountValue)
     };
 }
 
@@ -614,8 +618,9 @@ async function runTask(index) {
         const userName = ctx.name1 || '{{user}}';
         const charName = char?.name || ctx.name2 || '{{char}}';
         
-        // 获取聊天历史（使用通用设置）
-        const chatHistory = getChatHistory(settings.historyCount || 50);
+        // 获取聊天历史（优先使用任务的自定义设置，否则使用通用设置）
+        const historyCount = task.historyCount ?? settings.historyCount ?? 50;
+        const chatHistory = getChatHistory(historyCount);
         
         // 获取世界书内容
         const worldInfo = await getWorldInfoContent();
@@ -982,6 +987,11 @@ export function renderCustomTasksPanel() {
             
             <div class="jtw-section">
                 <h4>提示词设置</h4>
+                <div style="margin-bottom: 10px;">
+                    <label>历史消息数量（留空使用通用设置）</label>
+                    <input type="number" id="jtw-task-history-count" class="jtw-input" placeholder="留空使用通用设置" min="0" />
+                    <div class="jtw-hint">控制 {{chatHistory}} 变量包含的消息数量</div>
+                </div>
                 <div style="margin-bottom: 10px;">
                     <label>User 消息 1</label>
                     <textarea id="jtw-task-prompt-u1" class="jtw-input" rows="2" placeholder="系统角色设定..."></textarea>
