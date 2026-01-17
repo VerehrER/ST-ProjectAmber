@@ -1198,7 +1198,7 @@ function bindQuickAccessEvents() {
         const topOffset = windowWidth > 1000 ? 60 : 0;
 
         return {
-            minTop: visibleTop + topOffset + 10,
+            minTop: visibleTop + 10,
             maxTop: visibleBottom - ($panel.outerHeight() || 40) - 10
         };
     };
