@@ -842,6 +842,6 @@
 }
 
 .jtw-ce-prompt-preview .jtw-prompt-content {
-    max-height: 600px;
+    max-height: 400px;
     overflow-y: auto;
 }
