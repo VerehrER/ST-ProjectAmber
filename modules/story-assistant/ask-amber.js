@@ -620,7 +620,7 @@ function getModalHtml() {
                                         <label style="margin-left: 10px;">
                                             <input type="radio" name="jtw-aa-worldinfo-mode" value="activated" /> 仅激活的条目
                                         </label>
-                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"基于上一次生成时的关键词匹配结果）</div>
+                                        <div class="jtw-hint" style="padding-left: 24px;">（"仅激活"会实时检测当前聊天中的关键词匹配）</div>
                                     </div>
                                 </div>
                                 <div class="jtw-aa-history-row">

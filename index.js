@@ -11,7 +11,8 @@ import {
     world_names, 
     world_info,
     METADATA_KEY,
-    createWorldInfoEntry
+    createWorldInfoEntry,
+    checkWorldInfo
 } from "../../../world-info.js";
 import { oai_settings, getChatCompletionModel, chat_completion_sources } from "../../../openai.js";
 import { ChatCompletionService } from "../../../custom-request.js";
@@ -309,7 +310,7 @@ function removeTaggedContent(text, tagsString) {
 /**
  * 获取角色卡的世界书内容
  * @param {object} options - 选项
- * @param {boolean} options.activatedOnly - 是否仅获取被激活的条目（基于上次生成时的关键词匹配）
+ * @param {boolean} options.activatedOnly - 是否仅获取被激活的条目（基于关键词匹配）
  * @returns {Promise<string>}
  */
 async function getWorldInfoContent(options = {}) {
@@ -324,11 +325,13 @@ async function getWorldInfoContent(options = {}) {
         
         let activeEntries;
         
-        if (activatedOnly && lastActivatedWorldInfoEntries.length > 0) {
-            // 使用缓存的激活条目，但需要匹配当前目标世界书
-            // 激活条目中有 world 属性，筛选出属于目标世界书的条目
+        if (activatedOnly) {
+            // 主动执行世界书检查来获取激活的条目
+            const activatedEntries = await refreshActivatedWorldInfoEntries();
+            
+            // 筛选出属于目标世界书的条目
             const activatedUids = new Set(
-                lastActivatedWorldInfoEntries
+                activatedEntries
                     .filter(e => e.world === targetBook)
                     .map(e => e.uid)
             );
@@ -375,11 +378,37 @@ async function getWorldInfoContent(options = {}) {
 }
 
 /**
- * 获取缓存的激活世界书条目
- * @returns {Array}
+ * 主动刷新激活的世界书条目
+ * @returns {Promise<Array>} 激活的条目数组
  */
-function getLastActivatedWorldInfoEntries() {
-    return lastActivatedWorldInfoEntries;
+async function refreshActivatedWorldInfoEntries() {
+    try {
+        const ctx = getContext();
+        const chat = ctx.chat || [];
+        
+        // 构建聊天消息数组（checkWorldInfo 需要的格式是反向的消息数组）
+        const chatMessages = chat.map(msg => msg.mes || '').reverse();
+        
+        // 使用一个较大的 maxContext 值，确保能扫描足够的内容
+        const maxContext = 16000;
+        
+        // 调用 checkWorldInfo，isDryRun=true 表示不触发事件和副作用
+        const result = await checkWorldInfo(chatMessages, maxContext, true);
+        
+        if (result?.allActivatedEntries) {
+            const entries = Array.from(result.allActivatedEntries.values());
+            // 同时更新缓存
+            lastActivatedWorldInfoEntries = entries;
+            console.log(`[${EXT_NAME}] 刷新了 ${entries.length} 个激活的世界书条目`);
+            return entries;
+        }
+        
+        return [];
+    } catch (e) {
+        console.error(`[${EXT_NAME}] 刷新激活世界书条目失败:`, e);
+        // 如果刷新失败，回退到缓存
+        return lastActivatedWorldInfoEntries;
+    }
 }
 
 /**
@@ -1018,7 +1047,6 @@ function initStoryAssistantModule() {
         world_names,
         getChatHistory,
         getWorldInfoContent,
-        getLastActivatedWorldInfoEntries,
         extractIncludeTags,
         removeTaggedContent,
         callLLM,
