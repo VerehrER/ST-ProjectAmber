@@ -676,18 +676,38 @@ async function runTask(index) {
 function showTaskResultModal(task, result) {
     const { jsonToYaml } = dependencies;
     const isArray = Array.isArray(result);
+    
+    // 格式化内容时去除世界书属性
+    const formatItem = (item) => {
+        const cleaned = { ...item };
+        delete cleaned.keys;
+        delete cleaned.aliases;
+        delete cleaned.constant;
+        delete cleaned.selective;
+        delete cleaned.position;
+        delete cleaned.depth;
+        delete cleaned.order;
+        delete cleaned.excludeRecursion;
+        delete cleaned.preventRecursion;
+        delete cleaned.keysecondary;
+        return jsonToYaml(cleaned, 0);
+    };
+    
     const content = isArray 
-        ? result.map(item => jsonToYaml(item, 0)).join('\n\n')
-        : jsonToYaml(result, 0);
+        ? result.map(item => formatItem(item)).join('\n\n')
+        : formatItem(result);
     
     // 从结果中提取世界书属性（如果有的话）
+    // 优先级：JSON返回的属性 > 任务保存的默认值 > 全局默认值
     const firstItem = isArray ? result[0] : result;
-    const entryName = firstItem?.name || firstItem?.title || task.name;
-    const entryKeys = firstItem?.keys || firstItem?.aliases || [];
-    const entryConstant = firstItem?.constant ?? false;
-    const entryPosition = firstItem?.position ?? 0;
-    const entryDepth = firstItem?.depth ?? 4;
-    const entryOrder = firstItem?.order ?? 100;
+    const taskDefaults = task.worldbookDefaults || {};
+    
+    const entryName = firstItem?.name || firstItem?.title || taskDefaults.entryName || task.name;
+    const entryKeys = firstItem?.keys || firstItem?.aliases || taskDefaults.entryKeys || [];
+    const entryConstant = firstItem?.constant ?? taskDefaults.entryConstant ?? false;
+    const entryPosition = firstItem?.position ?? taskDefaults.entryPosition ?? 0;
+    const entryDepth = firstItem?.depth ?? taskDefaults.entryDepth ?? 4;
+    const entryOrder = firstItem?.order ?? taskDefaults.entryOrder ?? 100;
     
     // 填充弹窗
     $('#jtw-task-result-content').val(content);
@@ -756,6 +776,24 @@ async function saveTaskResult() {
     try {
         const settings = getSettings();
         const isArray = Array.isArray(result);
+        const task = $modal.data('task');
+        
+        // 保存用户的世界书设置到任务对象，作为下次的默认值
+        if (task && settings.customTasks) {
+            const taskIndex = settings.customTasks.findIndex(t => t.id === task.id);
+            if (taskIndex >= 0) {
+                settings.customTasks[taskIndex].worldbookDefaults = {
+                    entryName,
+                    entryKeys,
+                    entryConstant,
+                    entryPosition,
+                    entryDepth,
+                    entryOrder
+                };
+                settings.customTasks[taskIndex].updatedAt = Date.now();
+                saveSettingsCallback();
+            }
+        }
         
         if (isArray && result.length > 0) {
             // 数组结果：追加到条目
@@ -787,8 +825,22 @@ async function saveTaskResult() {
                 entry = createWorldInfoEntry(targetBook, worldData);
             }
             
-            // 格式化新内容
-            const newContent = result.map(item => jsonToYaml(item, 0)).join('\n\n');
+            // 格式化新内容时去除世界书属性
+            const cleanItem = (item) => {
+                const cleaned = { ...item };
+                delete cleaned.keys;
+                delete cleaned.aliases;
+                delete cleaned.constant;
+                delete cleaned.selective;
+                delete cleaned.position;
+                delete cleaned.depth;
+                delete cleaned.order;
+                delete cleaned.excludeRecursion;
+                delete cleaned.preventRecursion;
+                delete cleaned.keysecondary;
+                return cleaned;
+            };
+            const newContent = result.map(item => jsonToYaml(cleanItem(item), 0)).join('\n\n');
             const finalContent = existingContent 
                 ? `${existingContent.trim()}\n\n${newContent}\n\n`
                 : `${newContent}\n\n`;
