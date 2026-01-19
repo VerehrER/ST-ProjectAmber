@@ -238,11 +238,40 @@ function extractIncludeTags(text, tagsString) {
     let extractedContent = [];
     
     for (const tag of tags) {
-        // 匹配所有 <tag>...</tag> 格式的内容
-        const regex = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'gi');
+        // 查找最后一个开始标签的位置
+        const openTagRegex = new RegExp(`<${tag}[^>]*>`, 'gi');
+        let lastOpenMatch = null;
+        let lastOpenIndex = -1;
         let match;
-        while ((match = regex.exec(text)) !== null) {
-            extractedContent.push(match[1].trim());
+        
+        // 找到所有开始标签，记录最后一个
+        while ((match = openTagRegex.exec(text)) !== null) {
+            lastOpenMatch = match;
+            lastOpenIndex = match.index;
+        }
+        
+        if (lastOpenIndex === -1) continue; // 没有找到开始标签
+        
+        // 从最后一个开始标签位置开始，查找最后一个结束标签
+        const afterLastOpen = text.substring(lastOpenIndex);
+        const closeTagRegex = new RegExp(`<\\/${tag}>`, 'gi');
+        let lastCloseMatch = null;
+        let lastCloseIndex = -1;
+        
+        while ((match = closeTagRegex.exec(afterLastOpen)) !== null) {
+            lastCloseMatch = match;
+            lastCloseIndex = match.index;
+        }
+        
+        if (lastCloseIndex === -1) continue; // 没有找到结束标签
+        
+        // 提取从最后一个开始标签到最后一个结束标签之间的内容
+        const startPos = lastOpenIndex + lastOpenMatch[0].length;
+        const endPos = lastOpenIndex + lastCloseIndex;
+        const content = text.substring(startPos, endPos).trim();
+        
+        if (content) {
+            extractedContent.push(content);
         }
     }
     
