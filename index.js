@@ -1122,7 +1122,9 @@ function showStatus(message, isError = false) {
 function showJsonPreview(json) {
     const $preview = $('#jtw-json-preview');
     if (json) {
-        $preview.text(JSON.stringify(json, null, 2)).show();
+        // 转换为YAML格式
+        const yamlContent = jsonToYaml(json, 0);
+        $preview.text(yamlContent).show();
         $('#jtw-save-to-wb').prop('disabled', false);
     } else {
         $preview.hide();

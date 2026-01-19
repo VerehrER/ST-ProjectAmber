@@ -1290,9 +1290,17 @@ export function initTaskEvents(saveSettingsFn) {
     // 保存任务
     $('#jtw-save-task').on('click', saveTask);
     
-    // 任务结果弹窗事件
-    $('#jtw-task-result-close, #jtw-task-result-cancel').on('click', hideTaskResultModal);
+    // 任务结果弹窗事件 - 只能通过 X 按钮关闭
+    $('#jtw-task-result-close, #jtw-task-result-cancel').on('click', function(e) {
+        e.stopPropagation();
+        hideTaskResultModal();
+    });
     $('#jtw-task-result-save').on('click', saveTaskResult);
+    
+    // 在整个任务结果弹窗上阻止所有事件冒泡，避免点击遮罩层关闭
+    $('#jtw-task-result-modal').off('click mousedown pointerdown touchstart touchend').on('click mousedown pointerdown touchstart touchend', function(e) {
+        e.stopPropagation();
+    });
     
     // 任务结果弹窗位置变化时显示/隐藏深度输入框
     $('#jtw-task-result-entry-position').on('change', function() {
@@ -1300,13 +1308,6 @@ export function initTaskEvents(saveSettingsFn) {
             $('#jtw-task-result-depth-container').show();
         } else {
             $('#jtw-task-result-depth-container').hide();
-        }
-    });
-    
-    // 点击任务结果弹窗背景关闭
-    $('#jtw-task-result-modal').on('click', function(e) {
-        if (e.target === this) {
-            hideTaskResultModal();
         }
     });
     
