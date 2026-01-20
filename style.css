@@ -1029,7 +1029,7 @@
 .jtw-quick-access-toggle {
     width: 34px;
     height: 34px;
-    border-radius: 50%;
+    border-radius: 0;
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
     display: flex;
@@ -1042,6 +1042,7 @@
     border: none;
     touch-action: none;
     user-select: none;
+    transform: rotate(45deg);
 }
 
 .jtw-quick-access-toggle:hover {
