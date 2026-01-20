@@ -1027,9 +1027,9 @@
 
 /* 主切换按钮 */
 .jtw-quick-access-toggle {
-    width: 24px;
-    height: 24px;
-    border-radius: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
     background: linear-gradient(135deg, #f59e0b, #d97706);
     color: white;
     display: flex;
@@ -1161,8 +1161,8 @@
     }
     
     .jtw-quick-access-toggle {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         font-size: 18px;
     }
     
@@ -1224,8 +1224,8 @@
     }
     
     .jtw-quick-access-toggle {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         font-size: 16px;
     }
     
