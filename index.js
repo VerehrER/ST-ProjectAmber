@@ -1262,6 +1262,7 @@ function createQuickAccessPanel() {
     const quickAccessHtml = `
         <div id="jtw-quick-access-panel" class="jtw-quick-access">
             <div class="jtw-quick-access-toggle" title="Project Amber 快捷菜单">
+                <i class="fa-solid fa-diamond"></i>
             </div>
             <div class="jtw-quick-access-menu">
                 <div class="jtw-quick-access-item" data-action="ask-amber" title="问问琥珀">
