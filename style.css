@@ -384,7 +384,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0px;
+    padding: 20px;
     box-sizing: border-box;
     /* 确保在移动端也能正确覆盖 */
     -webkit-overflow-scrolling: touch;
